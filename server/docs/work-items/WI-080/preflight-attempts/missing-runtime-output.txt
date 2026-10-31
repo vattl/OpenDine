@@ -1,0 +1,26 @@
+Provider: claude
+State: HEALTH_FAILED
+Ready: NO
+- retry
+Provider: claude
+State: READY
+Ready: YES
+...............................................................................................................................................................E
+======================================================================
+ERROR: test_runtime_state_drift_only_blocks_release_validation (test_workflow_validation.WorkflowValidationTests.test_runtime_state_drift_only_blocks_release_validation)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\Admin\.codex\worktrees\opendine-deployment\my_project_server\server\.ai\scripts\tests\test_workflow_validation.py", line 78, in test_runtime_state_drift_only_blocks_release_validation
+    registry.write_text('{"workstreams":{"WI-999":{}}}\n', encoding="utf-8")
+  File "D:\ProgramData\anaconda3\Lib\pathlib.py", line 1047, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\ProgramData\anaconda3\Lib\pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\Admin\\AppData\\Local\\Temp\\tmp6tw_qdjc\\package\\.ai-runtime\\registry.json'
+
+----------------------------------------------------------------------
+Ran 160 tests in 57.752s
+
+FAILED (errors=1)
