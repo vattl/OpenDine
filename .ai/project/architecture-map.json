@@ -1,0 +1,26 @@
+{
+  "status": "ACTIVE",
+  "baseline_version": "PB-2",
+  "modules": [
+    "controllers",
+    "services",
+    "payment",
+    "kds",
+    "printing",
+    "reporting",
+    "security",
+    "persistence"
+  ],
+  "capability_owners": [
+    {"capability": "cashier settlement", "owner": "CashierCheckoutService"},
+    {"capability": "wechat payment transport", "owner": "com.lanf.payment.channel.wechat"},
+    {"capability": "payment success effects", "owner": "PaymentSuccessHandler"},
+    {"capability": "reconciliation", "owner": "ReconciliationServiceImpl"},
+    {"capability": "KDS cloud authority", "owner": "com.lanf.kds"},
+    {"capability": "approval token lifecycle", "owner": "ApprovalService / ApprovalTokenEnvelopeCipher"}
+  ],
+  "dependencies": [
+    "HTTP controllers -> services -> mappers/database",
+    "WeChat Pay -> verified callback/query -> idempotent settlement -> ledger/fulfillment"
+  ]
+}
