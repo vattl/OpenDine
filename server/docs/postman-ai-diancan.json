@@ -1,0 +1,198 @@
+{
+  "info": {
+    "name": "AI 点餐调试",
+    "description": "从推荐到下单的完整联调集合（含扫码绑定桌号安全链路）。\n\n使用前请修改变量：{{baseUrl}}、{{openid}}、{{scanContent}}。\n建议按【01 推荐到下单流程】文件夹顺序执行。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://www.laofei.com.cn" },
+    { "key": "openid", "value": "o_test_openid_123" },
+    { "key": "tableNumber", "value": "A01" },
+    { "key": "scanContent", "value": "请替换为真实扫码字符串（t_table.qrcode）" },
+    { "key": "scanToken", "value": "" },
+    { "key": "orderNo", "value": "ORD_TEST_202603200001" }
+  ],
+  "item": [
+    {
+      "name": "01 推荐到下单流程",
+      "item": [
+        {
+          "name": "1) AI 对话点餐（唯一入口）",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"openid\": \"{{openid}}\",\n  \"table_number\": \"{{tableNumber}}\",\n  \"prompt\": \"我们3个人堂食，预算200元，想吃少辣，先给我推荐一个下单方案\",\n  \"reset\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order/ai/chatSuggest",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "ai", "chatSuggest"]
+            },
+            "description": "自然语言推荐与点餐建议统一入口。"
+          }
+        },
+        {
+          "name": "2) 扫码校验并获取 scan_token（堂食必做）",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"openid\": \"{{openid}}\",\n  \"scan_content\": \"{{scanContent}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order/table/scan-verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "table", "scan-verify"]
+            },
+            "description": "返回 scan_token 和 table_number。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (json && json.scan_token) pm.collectionVariables.set('scanToken', json.scan_token);",
+                  "if (json && json.table_number) pm.collectionVariables.set('tableNumber', json.table_number);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3) 查桌台状态（应可用）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order/table_status?number={{tableNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "table_status"],
+              "query": [{ "key": "number", "value": "{{tableNumber}}" }]
+            },
+            "description": "确认桌台状态。"
+          }
+        },
+        {
+          "name": "4) 创建订单（堂食，需 scan_token）",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"openid\": \"{{openid}}\",\n  \"dineInOrTakeOut\": \"堂食\",\n  \"number_of_diners\": \"3\",\n  \"table_number\": \"{{tableNumber}}\",\n  \"scan_token\": \"{{scanToken}}\",\n  \"order_no\": \"{{orderNo}}\",\n  \"sett_amount\": 70.0,\n  \"discount_amount\": 0,\n  \"remark\": \"少辣\",\n  \"goods_list\": [\n    {\n      \"name\": \"烤羊肉串\",\n      \"quantity\": \"4\",\n      \"unit\": \"串\",\n      \"total_price\": 48.0,\n      \"selectedSpicy\": \"{\\\"辣度\\\":\\\"少辣\\\"}\",\n      \"cid\": \"a20250523022119000000933\"\n    },\n    {\n      \"name\": \"烤鸡翅\",\n      \"quantity\": \"2\",\n      \"unit\": \"串\",\n      \"total_price\": 22.0,\n      \"selectedSpicy\": \"{\\\"辣度\\\":\\\"少辣\\\"}\",\n      \"cid\": \"a20250523022125000000142\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "create"]
+            },
+            "description": "真实业务下单链路。若 scan_token 缺失/过期/不匹配会失败。"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "if (json && json.order_no) pm.collectionVariables.set('orderNo', json.order_no);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5) 查订单（按订单号）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order/getOrder?order_no={{orderNo}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "getOrder"],
+              "query": [{ "key": "order_no", "value": "{{orderNo}}" }]
+            },
+            "description": "验证下单结果。"
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 AI 对话接口",
+      "item": [
+        {
+          "name": "自然语言点餐建议",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"我们 2 个人，想简单吃点烤串，预算 120 左右，帮我搭一个不太辣的套餐\",\n  \"openid\": \"{{openid}}\",\n  \"table_number\": \"{{tableNumber}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order/ai/chatSuggest",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "ai", "chatSuggest"]
+            }
+          }
+        },
+        {
+          "name": "获取 AI 工具定义列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/order/ai/tools",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "ai", "tools"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 工具执行调试",
+      "item": [
+        {
+          "name": "工具执行（营业+预计时间+菜单）",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tool_calls\": [\n    { \"name\": \"get_business\", \"arguments\": {} },\n    { \"name\": \"calculate_finish_time\", \"arguments\": { \"dineInOrTakeOut\": \"堂食\" } },\n    { \"name\": \"list_dishes\", \"arguments\": {} }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order/ai/tools/execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "ai", "tools", "execute"]
+            }
+          }
+        },
+        {
+          "name": "工具执行（查桌台+历史订单）",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tool_calls\": [\n    { \"name\": \"get_table_status\", \"arguments\": { \"number\": \"{{tableNumber}}\" } },\n    { \"name\": \"order_history\", \"arguments\": { \"openid\": \"{{openid}}\", \"status\": \"all\", \"page\": 1, \"pageSize\": 10 } }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/order/ai/tools/execute",
+              "host": ["{{baseUrl}}"],
+              "path": ["order", "ai", "tools", "execute"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

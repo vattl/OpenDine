@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KDS 本地厨显模拟（浏览器）</title>
+  <!-- kds-demo build: 2026-05-30-expedition-serve -->
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", system-ui, sans-serif; background: #1a1a2e; color: #eee; }
+    header { padding: 12px 16px; background: #16213e; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    header label { font-size: 12px; color: #aaa; }
+    header input, header select { padding: 6px 8px; border-radius: 4px; border: 1px solid #444; background: #0f0f1a; color: #fff; }
+    header button { padding: 6px 14px; border: none; border-radius: 4px; background: #e94560; color: #fff; cursor: pointer; }
+    header button.secondary { background: #533483; }
+    .status-bar { padding: 8px 16px; background: #0f3460; font-size: 13px; }
+    main { display: grid; grid-template-columns: 1fr 320px; min-height: calc(100vh - 120px); }
+    #orders { padding: 12px; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; align-content: start; }
+    .card { background: #16213e; border-radius: 8px; padding: 12px; border-left: 4px solid #e94560; }
+    .card.rush { border-left-color: #ffc107; }
+    .card.overdue { border-left: 6px solid #ff3b3b; background: linear-gradient(135deg, #4a1520 0%, #2a1528 100%); box-shadow: 0 0 12px rgba(255, 59, 59, 0.35); }
+    .card.overdue h3 { color: #ffb4b4; }
+    .card.overdue .meta { color: #ff8a8a; }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .card .meta { font-size: 12px; color: #aaa; margin-bottom: 8px; }
+    .item { display: flex; justify-content: space-between; align-items: center; padding: 8px; margin: 4px 0; background: #0f0f1a; border-radius: 6px; font-size: 14px; }
+    .item.overdue { outline: 2px solid #ff3b3b; background: rgba(255, 59, 59, 0.12); }
+    .slot.overdue { outline: 2px solid #ff3b3b; background: #4a1820 !important; }
+    .slot.overdue .slot-qty { color: #ff6b6b; }
+    .item.cooking { border-left: 3px solid #f1c40f; }
+    .item button { padding: 4px 10px; margin-left: 4px; font-size: 12px; cursor: pointer; border: none; border-radius: 4px; }
+    .btn-cook { background: #3498db; color: #fff; }
+    .btn-done { background: #2ecc71; color: #fff; }
+    .btn-lack { background: #95a5a6; color: #fff; }
+    aside { background: #0f0f1a; border-left: 1px solid #333; display: flex; flex-direction: column; }
+    aside h4 { margin: 12px; font-size: 13px; color: #888; }
+    #wsLog { flex: 1; overflow: auto; padding: 8px; font-family: monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+    .log-line { margin: 4px 0; padding: 4px; background: #1a1a2e; border-radius: 3px; }
+    .empty { color: #666; padding: 24px; text-align: center; grid-column: 1 / -1; }
+    .grill-main { display: grid; grid-template-columns: 1fr 280px; min-height: calc(100vh - 120px); }
+    .grill-board { display: grid; grid-template-columns: 1.1fr 1fr 0.9fr; gap: 8px; padding: 8px; min-height: calc(100vh - 120px); }
+    .grill-panel { background: #0f0f1a; border-radius: 8px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .grill-panel h4 { margin: 0; padding: 10px 12px; font-size: 14px; background: #16213e; border-bottom: 1px solid #333; color: #ccc; }
+    .grill-panel-body { flex: 1; overflow: auto; padding: 8px; }
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; align-content: start; }
+    .slot { background: #16213e; border-radius: 8px; padding: 10px 8px; text-align: center; min-height: 72px; display: flex; flex-direction: column; justify-content: center; }
+    .slot.active { outline: 2px solid #e94560; background: #1e2a4a; }
+    .slot.idle { opacity: 0.45; background: #12121f; color: #666; cursor: default; }
+    .slot.idle .slot-qty { color: #555; }
+    .slot.clickable { cursor: pointer; }
+    .slot.clickable:hover { filter: brightness(1.15); }
+    .slot .slot-hint { font-size: 10px; color: #e94560; margin-top: 4px; }
+    .slot .slot-name { font-size: 12px; color: #aaa; margin-bottom: 4px; line-height: 1.2; }
+    .slot .slot-qty { font-size: 28px; font-weight: bold; color: #eee; }
+    .slot .slot-unit { font-size: 11px; color: #888; }
+    .table-card { margin-bottom: 10px; }
+    .table-card h3 { font-size: 15px; }
+    .overview-toolbar { display: none; flex-wrap: wrap; gap: 6px; padding: 8px 16px; background: #0f3460; align-items: center; }
+    .overview-toolbar.visible { display: flex; }
+    .overview-toolbar select, .overview-toolbar label { font-size: 12px; }
+    .overview-toolbar .chip { padding: 4px 8px; border-radius: 12px; border: 1px solid #555; background: #1a1a2e; color: #ccc; cursor: pointer; font-size: 12px; }
+    .overview-toolbar .chip.on { border-color: #e94560; color: #fff; background: #533483; }
+    .tag { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-left: 4px; }
+    .tag-rush { background: #ffc107; color: #111; }
+    .tag-overdue { background: #ff6b6b; color: #fff; }
+    .tag-add { background: #3498db; color: #fff; }
+    .tag-hold { background: #9b59b6; color: #fff; }
+    .tag-status { background: #555; color: #eee; }
+    .tag-status.cooking { background: #f1c40f; color: #111; }
+    .tag-status.done { background: #2ecc71; color: #fff; }
+    .tag-skewer { background: #555; color: #eee; }
+    #mainOverview { display: none; padding: 12px; overflow: auto; min-height: calc(100vh - 160px); }
+    #mainOverview.grid-on { display: grid; grid-template-columns: 1fr 320px; }
+    #overviewCards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; align-content: start; }
+    .card.serve-click { cursor: pointer; border-left-color: #2ecc71; }
+    .card.serve-click:hover { filter: brightness(1.08); }
+    .serve-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .serve-panel { background: #16213e; border-radius: 12px; padding: 16px; width: min(320px, 92vw); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    .serve-panel h3 { margin: 0 0 8px; font-size: 18px; }
+    .serve-display { font-size: 36px; text-align: center; padding: 12px; background: #0f0f1a; border-radius: 8px; margin: 8px 0 12px; letter-spacing: 2px; }
+    .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .numpad button { padding: 14px 0; font-size: 20px; border: none; border-radius: 8px; background: #533483; color: #fff; cursor: pointer; }
+    .numpad button.action { background: #0f3460; font-size: 14px; }
+    .numpad button.ok { background: #2ecc71; }
+    .serve-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .serve-actions button { flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>
+    <label>API</label><input id="baseUrl" value="http://127.0.0.1:8080" style="width:180px" />
+    <label>门店</label><input id="shopId" type="number" value="1" style="width:60px" />
+    <label>屏</label>
+    <select id="screenTag">
+      <option value="meat_grill">荤烤 meat_grill</option>
+      <option value="veg_grill">素烤 veg_grill</option>
+      <option value="seafood_special">海鲜 seafood_special</option>
+      <option value="skewer_aggregate">抓串 skewer_aggregate</option>
+      <option value="expedition">出餐 expedition</option>
+      <option value="boss_overview">收银总览 boss_overview</option>
+    </select>
+    <label>设备码</label><input id="deviceCode" value="KDS-BROWSER-01" style="width:140px" />
+    <button id="btnLogin">登录</button>
+    <button id="btnWs" class="secondary">连接 WS</button>
+    <button id="btnRefresh" class="secondary">刷新列表</button>
+    <button id="btnStats" class="secondary">统计</button>
+  </header>
+  <div class="overview-toolbar" id="overviewToolbar">
+    <label>队列</label>
+    <select id="ovQueue">
+      <option value="pending">待制作</option>
+      <option value="cooking">制作中</option>
+      <option value="ready_serve">待传菜</option>
+      <option value="done">已完成</option>
+    </select>
+    <label>就餐</label>
+    <select id="ovDining">
+      <option value="all">全部</option>
+      <option value="dine_in">堂食</option>
+      <option value="takeout">外卖</option>
+      <option value="pack">打包</option>
+    </select>
+    <label>展示</label>
+    <select id="ovView">
+      <option value="dish">按菜品合并</option>
+      <option value="order">按订单</option>
+      <option value="table">按台号</option>
+    </select>
+    <span style="color:#888;font-size:12px">特殊筛选</span>
+    <button type="button" class="chip" data-extra="overdue">超时</button>
+    <button type="button" class="chip" data-extra="rush">催菜</button>
+    <button type="button" class="chip" data-extra="add_dish">加菜</button>
+    <button type="button" class="chip" data-extra="hold">等叫</button>
+  </div>
+  <div class="status-bar" id="statusBar">同源打开 /kds-demo.html。规则：<strong>仅「登录」改绑定</strong>；改下拉≠改屏；多屏用<strong>不同设备码</strong>，禁止多标签共码。</div>
+  <main id="mainDefault">
+    <div id="orders"><div class="empty">暂无订单（登录后刷新）</div></div>
+    <aside>
+      <h4>WebSocket 消息</h4>
+      <div id="wsLog"></div>
+    </aside>
+  </main>
+  <div id="mainGrill" class="grill-main" style="display:none">
+    <div class="grill-board">
+      <section class="grill-panel">
+        <h4>左 · 桌号队列（待制作）</h4>
+        <div class="grill-panel-body" id="colTables"></div>
+      </section>
+      <section class="grill-panel">
+        <h4>中 · 菜品固定位（待做汇总）</h4>
+        <div class="grill-panel-body product-grid" id="colProducts"></div>
+      </section>
+      <section class="grill-panel">
+        <h4>右 · 制作中</h4>
+        <div class="grill-panel-body" id="colCooking"></div>
+      </section>
+    </div>
+    <aside>
+      <h4>WebSocket 消息</h4>
+      <div id="wsLogGrill"></div>
+    </aside>
+  </div>
+  <div id="mainOverview">
+    <div id="overviewCards"><div class="empty">收银总览 / 出餐屏：登录对应屏后刷新</div></div>
+    <aside>
+      <h4>WebSocket 消息</h4>
+      <div id="wsLogOverview"></div>
+    </aside>
+  </div>
+  <div id="serveModal" class="serve-modal">
+    <div class="serve-panel">
+      <h3 id="serveDishTitle">菜品</h3>
+      <div class="meta" id="serveMaxHint">待传 0</div>
+      <div class="serve-display" id="serveDisplay">0</div>
+      <div class="numpad" id="serveNumpad"></div>
+      <div class="serve-actions">
+        <button type="button" id="serveCancel" style="background:#555;color:#fff">取消</button>
+        <button type="button" id="serveConfirm" style="background:#2ecc71;color:#fff">确认传菜</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const STATUS_LABEL = { 0: '待做', 1: '制作中', 2: '完成', 3: '作废' };
+    let token = localStorage.getItem('kds_demo_token') || '';
+    /** 当前 token 在服务端绑定的 screen_tag（唯一真相，仅登录或 /me 更新） */
+    let boundScreen = '';
+    let ws = null;
+    let pingTimer = null;
+    let wsRefreshTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+    const status = (msg) => { $('statusBar').textContent = msg; };
+    const GRILL_SCREENS = ['meat_grill', 'veg_grill', 'seafood_special'];
+    const BOSS_SCREEN = 'boss_overview';
+    const EXPEDITION_SCREEN = 'expedition';
+    const ovExtra = new Set();
+    let serveTarget = null;
+    let serveInput = '';
+    function isGrillScreen(tag) { return GRILL_SCREENS.includes(tag); }
+    function isBossScreen(tag) { return tag === BOSS_SCREEN; }
+    function isExpeditionScreen(tag) { return tag === EXPEDITION_SCREEN; }
+    function isOverviewScreen(tag) { return isBossScreen(tag) || isExpeditionScreen(tag); }
+    function showLayout(screen) {
+      const grill = isGrillScreen(screen);
+      const overview = isOverviewScreen(screen);
+      $('mainDefault').style.display = (grill || overview) ? 'none' : 'grid';
+      $('mainGrill').style.display = grill ? 'grid' : 'none';
+      $('mainOverview').style.display = overview ? 'grid' : 'none';
+      $('mainOverview').className = overview ? 'grid-on' : '';
+      $('overviewToolbar').classList.toggle('visible', overview);
+    }
+    function logWsTarget() {
+      const s = boundScreen;
+      if (isGrillScreen(s)) return 'wsLogGrill';
+      if (isOverviewScreen(s)) return 'wsLogOverview';
+      return 'wsLog';
+    }
+    function overviewQuery() {
+      const parts = [
+        'queue=' + encodeURIComponent($('ovQueue').value),
+        'dining=' + encodeURIComponent($('ovDining').value),
+        'view=' + encodeURIComponent($('ovView').value)
+      ];
+      if (ovExtra.size) parts.push('extra=' + encodeURIComponent([...ovExtra].join(',')));
+      return parts.join('&');
+    }
+
+    function apiOk(code) {
+      if (code === undefined || code === null) return true;
+      return Number(code) === 0 || Number(code) === 200;
+    }
+
+    function clearKdsSession() {
+      token = '';
+      boundScreen = '';
+      localStorage.removeItem('kds_demo_token');
+      localStorage.removeItem('kds_demo_screen');
+    }
+
+    function extractDeviceToken(device) {
+      if (!device) return '';
+      return device.device_token || device.deviceToken || '';
+    }
+
+    function api(path, opts = {}) {
+      const base = $('baseUrl').value.replace(/\/$/, '');
+      const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+      if (token && !opts.noToken) headers['X-Kds-Device-Token'] = token;
+      return fetch(base + path, { ...opts, headers, mode: 'cors' }).then(async (r) => {
+        let j;
+        try { j = await r.json(); } catch (_) {
+          throw new Error('HTTP ' + r.status + ' 响应非 JSON');
+        }
+        if (!apiOk(j.code)) {
+          const msg = j.msg || ('code=' + j.code);
+          if (Number(j.code) === 401 && /设备未绑定|缺少厨显设备令牌/.test(msg)) {
+            clearKdsSession();
+          }
+          throw new Error(msg);
+        }
+        return j;
+      });
+    }
+
+    function wsUrl() {
+      if (!boundScreen) throw new Error('未绑定屏，无法连接 WS');
+      const base = $('baseUrl').value.replace(/\/$/, '');
+      const u = new URL(base);
+      const proto = u.protocol === 'https:' ? 'wss:' : 'ws:';
+      const shopId = $('shopId').value;
+      return `${proto}//${u.host}/ws/kds?shop_id=${shopId}&screen_tag=${encodeURIComponent(boundScreen)}&token=${encodeURIComponent(token)}`;
+    }
+
+    function applySession(dev) {
+      token = extractDeviceToken(dev);
+      if (!token) throw new Error('登录未返回 device_token');
+      boundScreen = (dev && (dev.screen_tag || dev.screenTag)) || '';
+      if (!boundScreen) throw new Error('登录未返回 screen_tag');
+      localStorage.setItem('kds_demo_token', token);
+      localStorage.setItem('kds_demo_screen', boundScreen);
+      $('screenTag').value = boundScreen;
+    }
+
+    function pendingLoginHint() {
+      const want = $('screenTag').value;
+      if (!token || !boundScreen) return '未登录';
+      if (want === boundScreen) return null;
+      return '待登录：token 绑定「' + boundScreen + '」，下拉为「' + want + '」— 仅点「登录」才会改绑定（勿多标签共用一个设备码）';
+    }
+
+    function updatePendingUi() {
+      const hint = pendingLoginHint();
+      if (hint && hint !== '未登录') {
+        status(hint);
+        if (ws) { ws.close(); ws = null; }
+      }
+    }
+
+    function logWs(text) {
+      const el = document.createElement('div');
+      el.className = 'log-line';
+      el.textContent = new Date().toLocaleTimeString() + ' ' + text;
+      const box = $(logWsTarget());
+      box.prepend(el);
+      while (box.children.length > 80) box.lastChild.remove();
+    }
+
+    async function login() {
+      const body = {
+        shop_id: Number($('shopId').value),
+        device_code: $('deviceCode').value.trim(),
+        screen_tag: $('screenTag').value,
+        device_name: '浏览器模拟屏'
+      };
+      if (!body.device_code) { alert('请填写设备码'); return; }
+      const j = await api('/kds/device/login', { method: 'POST', body: JSON.stringify(body), noToken: true });
+      if (ws) { ws.close(); ws = null; }
+      applySession(j.device);
+      status('已登录 token=' + token.slice(0, 8) + '… 绑定屏=' + boundScreen + ' · 设备码=' + body.device_code);
+      showLayout(boundScreen);
+      await refreshList();
+      try { await connectWs(); } catch (e) { logWs('! WS 连接失败: ' + (e.message || e)); }
+    }
+
+    function connectWs() {
+      return new Promise((resolve, reject) => {
+        if (!token || !boundScreen) { reject(new Error('请先登录')); return; }
+        const hint = pendingLoginHint();
+        if (hint) { reject(new Error(hint)); return; }
+        if (ws) { ws.close(); ws = null; }
+        if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+        const url = wsUrl();
+        logWs('→ 连接 ' + url.replace(/token=[^&]+/, 'token=***'));
+        ws = new WebSocket(url);
+        ws.onopen = () => {
+          logWs('WS 已连接 bucket=' + $('shopId').value + ':' + boundScreen);
+          status('WS 已连接 · 门店 ' + $('shopId').value + ' · 屏 ' + boundScreen);
+          resolve();
+        };
+        ws.onmessage = (e) => {
+          try {
+            const m = JSON.parse(e.data);
+            if (m.type === 'pong') return;
+            const p = m.payload || {};
+            logWs('← ' + m.type + ' →屏' + (m.screen_tag || '?')
+              + (p.item_status != null ? ' status=' + p.item_status : '')
+              + (p.source_screen_tag ? ' from=' + p.source_screen_tag : ''));
+            if (['new_order', 'update_order', 'cancel_item', 'cancel_order', 'order_status_changed'].includes(m.type)) {
+              onWsBusinessEvent(m);
+            }
+          } catch (_) {
+            logWs('← ' + e.data);
+          }
+        };
+        ws.onclose = () => { logWs('WS 断开'); };
+        ws.onerror = () => { logWs('WS 错误'); reject(new Error('WebSocket 连接失败')); };
+        pingTimer = setInterval(() => { if (ws && ws.readyState === 1) ws.send('ping'); }, 15000);
+      });
+    }
+
+    function onWsBusinessEvent(m) {
+      if (!boundScreen) return;
+      if (m.screen_tag && m.screen_tag !== boundScreen) {
+        logWs('(忽略推送：目标桶 ' + m.screen_tag + '，本机 ' + boundScreen + ')');
+        return;
+      }
+      const p = m.payload || {};
+      if (isOverviewScreen(boundScreen) && m.type === 'update_order'
+          && (p.item_status === 2 || p.served_quantity != null)) {
+        if ($('ovQueue').value === 'pending' || $('ovQueue').value === 'cooking') {
+          $('ovQueue').value = 'ready_serve';
+          status('收到完成/传菜推送，已切到「待传菜」视图');
+        }
+      }
+      scheduleRefreshAfterPush(m);
+    }
+
+    function scheduleRefreshAfterPush(msg) {
+      if (wsRefreshTimer) clearTimeout(wsRefreshTimer);
+      wsRefreshTimer = setTimeout(() => safeRefreshList(msg), 350);
+    }
+
+    async function safeRefreshList(wsMsg) {
+      try {
+        await refreshList(wsMsg);
+      } catch (e) {
+        const tip = '列表拉取失败: ' + (e.message || e);
+        const hint = pendingLoginHint();
+        status(tip + (hint ? ' · ' + hint : ''));
+        logWs('! ' + tip);
+        console.error(tip, e);
+        if (/设备未绑定|缺少厨显设备令牌/.test(String(e.message || ''))) {
+          clearKdsSession();
+          alert('token 已失效（可能被其它标签页用同一设备码重新登录覆盖）。请本页重新点「登录」。');
+        } else if (/仅抓串|当前设备绑定|仅.*屏可|不可查询/.test(String(e.message || ''))) {
+          logWs('! 岗位与 token 不一致，请点「登录」；多屏请用不同设备码，勿依赖自动改绑');
+        }
+      }
+    }
+
+    /** 只读同步服务端绑定，绝不触发 login */
+    async function syncBoundFromServer() {
+      if (!token) return '';
+      const me = await api('/kds/device/me');
+      const tag = (me.device && (me.device.screen_tag || me.device.screenTag)) || '';
+      if (tag && tag !== boundScreen) {
+        boundScreen = tag;
+        localStorage.setItem('kds_demo_screen', tag);
+        $('screenTag').value = tag;
+        logWs('! 绑定屏已被其它终端改为 ' + tag + '，已同步下拉框');
+      }
+      return boundScreen;
+    }
+
+    async function refreshList(wsMsg) {
+      if (!token) throw new Error('请先点「登录」');
+      const hint = pendingLoginHint();
+      if (hint) throw new Error(hint);
+      try {
+        await syncBoundFromServer();
+      } catch (e) {
+        clearKdsSession();
+        throw new Error('token 无效：' + (e.message || e));
+      }
+      const screen = boundScreen;
+      showLayout(screen);
+      if (isOverviewScreen(screen)) {
+        const path = isExpeditionScreen(screen) ? '/kds/expedition/board?' : '/kds/overview/board?';
+        const j = await api(path + overviewQuery());
+        renderOverviewBoard(j, screen);
+        const s = j.summary || {};
+        const label = isExpeditionScreen(screen) ? '出餐屏' : '收银总览';
+        status(`${label} · ${$('ovQueue').selectedOptions[0].text} · 工单 ${s.ticket_count || 0} · 单 ${s.order_count || 0} · 菜量 ${s.dish_quantity || 0}`);
+        return;
+      }
+      if (isGrillScreen(screen)) {
+        const j = await api('/kds/grill/board?screen_tag=' + encodeURIComponent(screen));
+        renderGrillBoard(j);
+        const tq = (j.table_queue || []).length;
+        const ck = (j.cooking_groups || j.cooking || []).length;
+        const pendingQty = (j.product_slots || []).reduce((s, p) => s + (p.quantity || 0), 0);
+        status(`烤制三栏 · 桌 ${tq} · 待做串 ${pendingQty} · 制作中 ${ck} 组 · ${screen}`);
+        return;
+      }
+      let path = '/kds/order/list?pageSize=50&screen_tag=' + encodeURIComponent(screen);
+      if (screen === 'skewer_aggregate') {
+        const j = await api('/kds/skewer/summary');
+        renderSkewer(j.items || []);
+        status('抓串汇总 ' + (j.items || []).length + ' 项');
+        return;
+      }
+      const j = await api(path);
+      const orders = j.orders || [];
+      if (!orders.length && wsMsg && wsMsg.payload) {
+        renderOrdersFromWs(wsMsg);
+        status('WS 新单已展示（REST 列表暂空，可点刷新或检查工单/屏绑定）');
+        return;
+      }
+      renderOrders(orders, screen);
+      const active = orders.reduce((n, o) => n + filterItemsForScreen(o.items, screen).length, 0);
+      {
+        status('列表 ' + orders.length + ' 单 · 待做/制作中 ' + active + ' 项 · 屏=' + (j.screen_tag || screen));
+      }
+    }
+
+    function renderOrdersFromWs(msg) {
+      const p = msg.payload || {};
+      renderOrders([{
+        order_id: p.order_id,
+        order_no: p.order_no,
+        table_number: p.table_number,
+        remark: '（来自 WS，待 REST 同步明细）',
+        items: [{ name: '新单推送', quantity: 1, item_status: 0, detail_id: null, wait_seconds: 0 }]
+      }]);
+    }
+
+    function renderGrillBoard(data) {
+      const tables = $('colTables');
+      const products = $('colProducts');
+      const cooking = $('colCooking');
+      tables.innerHTML = '';
+      products.innerHTML = '';
+      cooking.innerHTML = '';
+
+      const queue = data.table_queue || [];
+      if (!queue.length) {
+        tables.innerHTML = '<div class="empty">无待做桌号</div>';
+      } else {
+        queue.forEach((o) => {
+          const card = document.createElement('div');
+          const cardOverdue = o.overdue_flag === true || (o.items || []).some((it) => it.overdue_flag);
+          card.className = 'card table-card'
+            + (o.rush_flag === 1 ? ' rush' : '')
+            + (cardOverdue ? ' overdue' : '');
+          card.innerHTML = `<h3>桌 ${o.table_number || '-'} · ${o.order_no || ''}${cardOverdue ? ' · 超时' : ''}</h3>
+            <div class="meta">取餐 ${o.orderNumber ?? '-'} · ${o.dineInOrTakeOut || ''}${data.sla_minutes != null ? ' · SLA ' + data.sla_minutes + '分' : ''}</div>`;
+          (o.items || []).forEach((it) => {
+            const itemRow = document.createElement('div');
+            itemRow.className = 'item' + (it.overdue_flag ? ' overdue' : '');
+            itemRow.innerHTML = `<span>${it.name} x${it.quantity || 1} ${it.wait_seconds != null ? it.wait_seconds + 's' : ''}</span><span></span>`;
+            const actions = itemRow.lastElementChild;
+            const b1 = document.createElement('button');
+            b1.className = 'btn-cook';
+            b1.textContent = '制作';
+            b1.onclick = () => setStatus(it.detail_id, 1);
+            actions.appendChild(b1);
+            const bl = document.createElement('button');
+            bl.className = 'btn-lack';
+            bl.textContent = '缺货';
+            bl.onclick = () => lack(it.detail_id);
+            actions.appendChild(bl);
+            card.appendChild(itemRow);
+          });
+          tables.appendChild(card);
+        });
+      }
+
+      const slots = data.product_slots || [];
+      if (!slots.length) {
+        products.innerHTML = '<div class="empty">无绑屏上架菜品，请在后台 KDS 绑屏并确保门店上架</div>';
+      } else {
+        slots.forEach((s) => {
+          const cell = document.createElement('div');
+          const qty = s.quantity || 0;
+          const clickable = s.clickable === 1 || s.has_pending === 1 || qty > 0;
+          const slotOverdue = s.overdue_flag === true;
+          cell.className = 'slot' + (clickable ? ' active clickable' : ' idle') + (slotOverdue ? ' overdue' : '');
+          cell.innerHTML = `<div class="slot-name">${s.dish_name}</div>
+            <div class="slot-qty">${qty}</div>
+            <div class="slot-unit">${s.unit || '串'}</div>
+            ${clickable ? '<div class="slot-hint">点击合并制作</div>' : ''}`;
+          if (clickable) {
+            cell.onclick = () => startCookingByDish(s.dish_name);
+          }
+          products.appendChild(cell);
+        });
+      }
+
+      const groups = data.cooking_groups || [];
+      if (!groups.length) {
+        cooking.innerHTML = '<div class="empty">暂无制作中</div>';
+      } else {
+        groups.forEach((g) => {
+          const cookRow = document.createElement('div');
+          cookRow.className = 'item cooking';
+          const tables = g.table_numbers ? `桌${g.table_numbers}` : '';
+          cookRow.innerHTML = `<span>${g.dish_name} · 共${g.quantity || 0}${g.unit || '串'} ${tables} · ${g.wait_seconds || 0}s</span><span></span>`;
+          const actions = cookRow.lastElementChild;
+          const b2 = document.createElement('button');
+          b2.className = 'btn-done';
+          b2.textContent = '完成';
+          b2.onclick = () => finishCookingGroup(g.detail_ids || []);
+          actions.appendChild(b2);
+          cooking.appendChild(cookRow);
+        });
+      }
+    }
+
+    async function startCookingByDish(dishName) {
+      if (!dishName) return;
+      if (!confirm('将「' + dishName + '」全部待做串合并开始制作？')) return;
+      const j = await api('/kds/grill/start-cooking', {
+        method: 'POST',
+        body: JSON.stringify({ dish_name: dishName })
+      });
+      renderGrillBoard(j);
+      const tq = (j.table_queue || []).length;
+      const ck = (j.cooking_groups || []).length;
+      status(`已开始制作 ${dishName} · 更新 ${j.updated || 0} 条 · 桌 ${tq} · 制作中 ${ck} 组`);
+    }
+
+    async function finishCookingGroup(detailIds) {
+      const ids = (detailIds || []).filter((id) => id != null);
+      if (!ids.length) return;
+      for (const id of ids) {
+        await api('/kds/item/status', {
+          method: 'POST',
+          body: JSON.stringify({ detail_id: id, status: 2, screen_tag: boundScreen })
+        });
+      }
+      await safeRefreshList();
+    }
+
+    function renderSkewer(items) {
+      showLayout('skewer_aggregate');
+      const box = $('orders');
+      box.innerHTML = '';
+      if (!items.length) { box.innerHTML = '<div class="empty">待抓串为空（已全部抓齐或未启用抓串闸门）</div>'; return; }
+      items.forEach((row) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const screens = (row.target_screens || []).join(', ');
+        card.innerHTML = `<h3>${row.dish_name}</h3>
+          <div class="meta">待抓 ${row.quantity} ${row.unit || '串'} · 分流至 ${screens || '烤制屏'}</div>
+          <div class="skewer-actions"></div>`;
+        const actions = card.querySelector('.skewer-actions');
+        const btn = document.createElement('button');
+        btn.className = 'btn-done';
+        btn.textContent = '已抓齐';
+        btn.style.marginTop = '8px';
+        btn.onclick = () => pickSkewer(row.dish_name, row.detail_ids);
+        actions.appendChild(btn);
+        box.appendChild(card);
+      });
+    }
+
+    async function pickSkewer(dishName, detailIds) {
+      if (!confirm('确认「' + dishName + '」已抓齐？将分流至对应烤制屏待制作')) return;
+      await api('/kds/skewer/picked', {
+        method: 'POST',
+        body: JSON.stringify({ dish_name: dishName, detail_ids: detailIds || [] })
+      });
+      status('已抓齐: ' + dishName);
+      await safeRefreshList();
+    }
+
+    function filterItemsForScreen(items, screen) {
+      const list = items || [];
+      if (screen === 'expedition') {
+        return list.filter((it) => it.item_status === 2);
+      }
+      return list.filter((it) => it.item_status === 0 || it.item_status === 1);
+    }
+
+    function itemTags(line) {
+      let html = '';
+      const stLabel = line.item_status_label || STATUS_LABEL[line.item_status] || '';
+      if (stLabel) {
+        const cls = line.item_status === 1 ? 'tag-status cooking' : (line.item_status === 2 ? 'tag-status done' : 'tag-status');
+        html += `<span class="tag ${cls}">${stLabel}</span>`;
+      }
+      if (line.rush_flag === 1) html += '<span class="tag tag-rush">催</span>';
+      if (line.overdue_flag) html += '<span class="tag tag-overdue">超时</span>';
+      if (line.add_dish_flag === 1) html += '<span class="tag tag-add">加菜</span>';
+      if (line.hold_flag === 1) html += '<span class="tag tag-hold">等叫</span>';
+      if (line.skewer_picked === 0) html += '<span class="tag tag-skewer">未抓串</span>';
+      return html;
+    }
+
+    function canServeDish(g, screen, queue) {
+      return isExpeditionScreen(screen) && queue === 'ready_serve'
+        && (g.serve_clickable === 1 || (g.remaining_quantity != null ? g.remaining_quantity : g.quantity) > 0);
+    }
+
+    function openServeModal(g) {
+      const max = g.remaining_quantity != null ? g.remaining_quantity : g.quantity;
+      serveTarget = { dish_name: g.dish_name, screen_tag: g.screen_tag || null, max };
+      serveInput = '';
+      $('serveDishTitle').textContent = g.dish_name || '菜品';
+      $('serveMaxHint').textContent = `待传 ${max}${g.unit || ''} · ${g.screen_tag || '全岗'}`;
+      $('serveDisplay').textContent = '0';
+      $('serveModal').style.display = 'flex';
+    }
+
+    function closeServeModal() {
+      $('serveModal').style.display = 'none';
+      serveTarget = null;
+      serveInput = '';
+    }
+
+    function appendServeDigit(d) {
+      if (d === 'clear') { serveInput = ''; }
+      else if (d === 'back') { serveInput = serveInput.slice(0, -1); }
+      else { serveInput = (serveInput === '0' ? '' : serveInput) + d; }
+      $('serveDisplay').textContent = serveInput || '0';
+    }
+
+    async function confirmServe() {
+      if (!serveTarget) return;
+      const qty = parseInt(serveInput, 10) || 0;
+      if (qty <= 0) { alert('请输入传菜数量'); return; }
+      if (qty > serveTarget.max) { alert('不能超过待传 ' + serveTarget.max); return; }
+      const body = { dish_name: serveTarget.dish_name, quantity: qty };
+      if (serveTarget.screen_tag) body.screen_tag = serveTarget.screen_tag;
+      await api('/kds/expedition/serve', { method: 'POST', body: JSON.stringify(body) });
+      closeServeModal();
+      await safeRefreshList();
+    }
+
+    function renderOverviewBoard(data, screenTag) {
+      const screen = screenTag || boundScreen;
+      showLayout(screen);
+      const box = $('overviewCards');
+      box.innerHTML = '';
+      const view = data.view || $('ovView').value;
+      const queue = data.queue || $('ovQueue').value;
+      if (view === 'dish') {
+        const groups = data.dish_groups || [];
+        if (!groups.length) { box.innerHTML = '<div class="empty">当前筛选无数据</div>'; return; }
+        groups.forEach((g) => {
+          const card = document.createElement('div');
+          const clickable = canServeDish(g, screen, queue);
+          card.className = 'card' + (g.rush_flag === 1 ? ' rush' : '') + (clickable ? ' serve-click' : '');
+          const rem = g.remaining_quantity != null ? g.remaining_quantity : g.quantity;
+          const lines = (g.lines || []).map((it) => {
+            const qtyHint = it.line_quantity != null && it.line_quantity !== it.quantity
+              ? ` (已传${it.served_quantity || 0}/${it.line_quantity})` : '';
+            return `<div class="item">${it.name} x${it.quantity}${qtyHint} 桌${it.table_number || '-'} [${it.screen_tag}] ${itemTags(it)}</div>`;
+          }).join('');
+          const statLine = (g.pending_quantity > 0 || g.cooking_quantity > 0)
+            ? ` · 待做${g.pending_quantity || 0} / 制作中${g.cooking_quantity || 0}` : '';
+          const serveHint = clickable ? ' · 点击输入传菜数量' : '';
+          card.innerHTML = `<h3>${g.dish_name} · ${queue === 'ready_serve' ? '待传' : '共'} ${rem}${g.unit || ''}</h3>
+            <div class="meta">${g.screen_tag} · ${g.ticket_count} 条工单${statLine}${serveHint}</div>${lines}`;
+          if (clickable) card.onclick = () => openServeModal(g);
+          box.appendChild(card);
+        });
+        return;
+      }
+      const cards = data.order_cards || [];
+      if (!cards.length) { box.innerHTML = '<div class="empty">当前筛选无数据</div>'; return; }
+      cards.forEach((o) => {
+        const card = document.createElement('div');
+        card.className = 'card' + (o.rush_flag === 1 ? ' rush' : '');
+        const title = view === 'table'
+          ? `桌 ${o.table_number || '-'} · ${o.order_no || ''}`
+          : `${o.order_no || ''} · 桌 ${o.table_number || '-'}`;
+        const itemsHtml = (o.items || []).map((it) =>
+          `<div class="item">${it.name} x${it.quantity} [${STATUS_LABEL[it.item_status] ?? it.item_status}] ${it.screen_tag || ''} ${it.wait_seconds || 0}s${itemTags(it)}</div>`
+        ).join('');
+        card.innerHTML = `<h3>${title}</h3>
+          <div class="meta">${o.dineInOrTakeOut || ''} · 取餐 ${o.orderNumber ?? '-'} · ${o.remark || ''}</div>${itemsHtml}`;
+        box.appendChild(card);
+      });
+    }
+
+    function renderOrders(orders, screenTag) {
+      const screen = screenTag || boundScreen;
+      showLayout(screen);
+      const box = $('orders');
+      box.innerHTML = '';
+      const emptyMsg = screen === 'expedition'
+        ? '暂无待出餐菜品。请先在烤制屏点「完成」，此处显示各岗 item_status=2 的明细。'
+        : '待做队列为空。可在后台 repush 或下一笔 success 订单。';
+      if (!orders.length) { box.innerHTML = '<div class="empty">' + emptyMsg + '</div>'; return; }
+      orders.forEach((o) => {
+        const visibleItems = filterItemsForScreen(o.items, screen);
+        if (!visibleItems.length) return;
+        const card = document.createElement('div');
+        card.className = 'card' + (o.rush_flag === 1 ? ' rush' : '');
+        card.innerHTML = `<h3>${o.table_number || '-'} · ${o.order_no || ''}</h3>
+          <div class="meta">${o.dineInOrTakeOut || ''} · 取餐号 ${o.orderNumber ?? '-'} · ${o.remark || ''}</div>`;
+        visibleItems.forEach((it) => {
+          const itemRow = document.createElement('div');
+          itemRow.className = 'item' + (it.overdue_flag ? ' overdue' : '') + (it.item_status === 1 ? ' cooking' : '') + (it.item_status === 2 ? ' cooking' : '');
+          const station = it.screen_tag ? `[${it.screen_tag}] ` : '';
+          const label = `${station}${it.name || '?'} x${it.quantity || 1} [${STATUS_LABEL[it.item_status] ?? it.item_status}] ${it.wait_seconds != null ? it.wait_seconds + 's' : ''}`;
+          itemRow.innerHTML = `<span>${label}</span><span></span>`;
+          const actions = itemRow.lastElementChild;
+          if (screen !== 'expedition' && it.detail_id != null && it.item_status === 0) {
+            const b1 = document.createElement('button'); b1.className = 'btn-cook'; b1.textContent = '制作';
+            b1.onclick = () => setStatus(it.detail_id, 1);
+            actions.appendChild(b1);
+          }
+          if (screen !== 'expedition' && it.detail_id != null && it.item_status === 1) {
+            const b2 = document.createElement('button'); b2.className = 'btn-done'; b2.textContent = '完成';
+            b2.onclick = () => setStatus(it.detail_id, 2, it.screen_tag);
+            actions.appendChild(b2);
+          }
+          if (screen !== 'expedition' && it.detail_id != null) {
+            const bl = document.createElement('button'); bl.className = 'btn-lack'; bl.textContent = '缺货';
+            bl.onclick = () => lack(it.detail_id);
+            actions.appendChild(bl);
+          }
+          card.appendChild(itemRow);
+        });
+        box.appendChild(card);
+      });
+    }
+
+    async function setStatus(detailId, status, ticketScreen) {
+      const tag = ticketScreen || boundScreen;
+      await api('/kds/item/status', {
+        method: 'POST',
+        body: JSON.stringify({ detail_id: detailId, status, screen_tag: tag })
+      });
+      await safeRefreshList();
+    }
+
+    async function lack(detailId) {
+      if (!confirm('确认缺货？')) return;
+      await api('/kds/item/lack', { method: 'POST', body: JSON.stringify({ detail_id: detailId, remark: '浏览器缺货' }) });
+      await safeRefreshList();
+    }
+
+    async function stats() {
+      const j = await api('/kds/stats/today');
+      alert(JSON.stringify(j.stats, null, 2));
+    }
+
+    document.querySelectorAll('#overviewToolbar .chip').forEach((btn) => {
+      btn.onclick = () => {
+        const k = btn.getAttribute('data-extra');
+        if (ovExtra.has(k)) { ovExtra.delete(k); btn.classList.remove('on'); }
+        else { ovExtra.add(k); btn.classList.add('on'); }
+        if (token && boundScreen && isOverviewScreen(boundScreen)) safeRefreshList();
+      };
+    });
+    ['ovQueue', 'ovDining', 'ovView'].forEach((id) => {
+      $(id).addEventListener('change', () => {
+        if (token && boundScreen && isOverviewScreen(boundScreen)) safeRefreshList();
+      });
+    });
+
+    (function initServeNumpad() {
+      const keys = ['1','2','3','4','5','6','7','8','9','clear','0','back'];
+      const pad = $('serveNumpad');
+      keys.forEach((k) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = (k === 'clear' || k === 'back') ? 'action' : '';
+        b.textContent = k === 'clear' ? '清空' : (k === 'back' ? '退格' : k);
+        b.onclick = () => appendServeDigit(k);
+        pad.appendChild(b);
+      });
+      $('serveCancel').onclick = closeServeModal;
+      $('serveConfirm').onclick = () => confirmServe().catch((e) => alert(e.message || e));
+      $('serveModal').onclick = (e) => { if (e.target === $('serveModal')) closeServeModal(); };
+    })();
+
+    $('screenTag').addEventListener('change', () => {
+      showLayout($('screenTag').value);
+      updatePendingUi();
+    });
+
+    $('btnLogin').onclick = () => login().catch((e) => alert(e.message));
+    $('btnWs').onclick = () => connectWs().catch((e) => alert(e.message || e));
+    $('btnRefresh').onclick = () => safeRefreshList();
+    $('btnStats').onclick = () => stats().catch((e) => alert(e.message));
+    (function initSameOrigin() {
+      if (location.protocol === 'http:' || location.protocol === 'https:') {
+        $('baseUrl').value = location.origin;
+        status('同源 ' + location.origin + ' — 烤制三栏 v3（强刷 Ctrl+F5）');
+      }
+      showLayout($('screenTag').value);
+    })();
+
+    (async function initStoredSession() {
+      if (!token) return;
+      boundScreen = localStorage.getItem('kds_demo_screen') || '';
+      try {
+        await syncBoundFromServer();
+        showLayout(boundScreen || $('screenTag').value);
+        updatePendingUi();
+        if (!pendingLoginHint()) {
+          status('已恢复 token · 绑定屏 ' + boundScreen + '（改屏须点「登录」）');
+        }
+      } catch (_) {
+        clearKdsSession();
+        status('缓存 token 已失效，请重新登录');
+      }
+    })();
+
+  </script>
+</body>
+</html>

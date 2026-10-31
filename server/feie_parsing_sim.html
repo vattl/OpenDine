@@ -1,0 +1,84 @@
+<html style="margin:0;padding:0;">
+<div style="background-color:transparent;box-sizing:border-box;padding:4px;font-family:'Roboto','PingFang SC','Segoe UI',Arial,sans-serif;color:#1A1B1C;line-height:1.5;">
+  <div style="font-size:15px;font-weight:600;margin:8px 4px 2px;">前端传入 → 后端飞鹅规则解析（真实引擎输出）</div>
+  <div style="font-size:12px;color:#6B7280;margin:0 4px 12px;">数据来源：实际运行 PrintTemplateEngineImpl 的渲染结果（renderCustomContent / renderDynamicTicket），覆盖 if 条件、空值隐藏、菜品迭代、标签透传</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 4px 14px;font-size:12px;">
+    <div style="flex:1 1 150px;padding:8px 10px;background:linear-gradient(135deg,rgba(139,200,234,.15),rgba(139,200,234,.3));border-radius:12px;">① 归一：&lt;BR&gt; 与 \n 统一为行分隔，避免重复换行</div>
+    <div style="flex:1 1 150px;padding:8px 10px;background:linear-gradient(135deg,rgba(201,167,232,.15),rgba(201,167,232,.3));border-radius:12px;">② if：{if:条件}…{else}…{/if} 按订单数据展开分支</div>
+    <div style="flex:1 1 150px;padding:8px 10px;background:linear-gradient(135deg,rgba(242,179,147,.15),rgba(242,179,147,.3));border-radius:12px;">③ 插值：{变量} 替换订单值；空值整行隐藏</div>
+    <div style="flex:1 1 150px;padding:8px 10px;background:linear-gradient(135deg,rgba(158,172,234,.15),rgba(158,172,234,.3));border-radius:12px;">④ 透传：&lt;CB&gt;/&lt;QR&gt;/&lt;CUT&gt; 等标签原样下发，尾部走纸</div>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin:0 4px;box-sizing:border-box;">
+
+    <div style="flex:1 1 320px;min-width:280px;max-width:100%;padding:12px 14px;background:#FFFFFF;border:1px solid #E4E3DD;border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:13px;font-weight:600;">场景 1 · 堂食订单（备注有值）</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:6px;">用餐方式=堂食 ｜ 桌号 A08 ｜ 备注“少油少盐”</div>
+      <div style="font-size:11px;margin-bottom:10px;"><span style="display:inline-block;background:rgba(82,196,26,.12);color:#389E0D;padding:1px 8px;border-radius:99px;">if 命中 true 分支 → 台号</span></div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">① 前端传入（原始数据）</div>
+      <div class="c-in" style="font-family:Consolas,Menlo,monospace;font-size:11px;background:#F8F7F4;border:1px solid #EDEBE4;border-radius:8px;padding:8px 10px;word-break:break-all;white-space:pre-wrap;margin-bottom:10px;">&lt;CB&gt;老肥油边王&lt;/CB&gt;&lt;BR&gt;{if:用餐方式=堂食}台号：{桌号}{else}取餐码：{取餐码}{/if}&lt;BR&gt;备注：{备注}&lt;BR&gt;&lt;QR&gt;https://u.wechat.com/x&lt;/QR&gt;&lt;CUT&gt;</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">② 后端解析并下发（content）</div>
+      <div class="c-out" style="font-family:Consolas,Menlo,monospace;font-size:11px;background:#F8F7F4;border:1px solid #EDEBE4;border-radius:8px;padding:8px 10px;word-break:break-all;white-space:pre-wrap;margin-bottom:10px;">&lt;CB&gt;老肥油边王&lt;/CB&gt;&lt;BR&gt;台号：A08&lt;BR&gt;备注：少油少盐&lt;BR&gt;&lt;QR&gt;https://u.wechat.com/x&lt;/QR&gt;&lt;CUT&gt;&lt;BR&gt;</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">③ 打印机实际效果（58mm 模拟）</div>
+      <div class="ticket" style="background:#FFFFFF;border:1px dashed #C9C6BD;border-radius:8px;padding:10px 14px;max-width:220px;font-family:Consolas,Menlo,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;">老肥油边王
+台号：A08
+备注：少油少盐
+https://u.wechat.com/x
+<div style="border-top:1px dashed #B8B4A8;margin:8px -14px -10px;padding-top:2px;text-align:center;font-size:10px;color:#B8B4A8;">✂ 切刀 / 走纸</div></div>
+    </div>
+
+    <div style="flex:1 1 320px;min-width:280px;max-width:100%;padding:12px 14px;background:#FFFFFF;border:1px solid #E4E3DD;border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:13px;font-weight:600;">场景 2 · 打包订单（备注为空）</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:6px;">用餐方式=打包 ｜ 无台号 ｜ 备注空（取餐码=订单ID 1002）</div>
+      <div style="font-size:11px;margin-bottom:10px;"><span style="display:inline-block;background:rgba(82,196,26,.12);color:#389E0D;padding:1px 8px;border-radius:99px;">if 命中 else 分支 → 取餐码；备注行被隐藏</span></div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">① 前端传入（原始数据）</div>
+      <div class="c-in" style="font-family:Consolas,Menlo,monospace;font-size:11px;background:#F8F7F4;border:1px solid #EDEBE4;border-radius:8px;padding:8px 10px;word-break:break-all;white-space:pre-wrap;margin-bottom:10px;">&lt;CB&gt;老肥油边王&lt;/CB&gt;&lt;BR&gt;{if:用餐方式=堂食}台号：{桌号}{else}取餐码：{取餐码}{/if}&lt;BR&gt;备注：{备注}&lt;BR&gt;&lt;CUT&gt;</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">② 后端解析并下发（content）</div>
+      <div class="c-out" style="font-family:Consolas,Menlo,monospace;font-size:11px;background:#F8F7F4;border:1px solid #EDEBE4;border-radius:8px;padding:8px 10px;word-break:break-all;white-space:pre-wrap;margin-bottom:10px;">&lt;CB&gt;老肥油边王&lt;/CB&gt;&lt;BR&gt;取餐码：1002&lt;BR&gt;&lt;CUT&gt;&lt;BR&gt;</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">③ 打印机实际效果（58mm 模拟）</div>
+      <div class="ticket" style="background:#FFFFFF;border:1px dashed #C9C6BD;border-radius:8px;padding:10px 14px;max-width:220px;font-family:Consolas,Menlo,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;">老肥油边王
+取餐码：1002
+<div style="border-top:1px dashed #B8B4A8;margin:8px -14px -10px;padding-top:2px;text-align:center;font-size:10px;color:#B8B4A8;">✂ 切刀 / 走纸</div></div>
+    </div>
+
+    <div style="flex:1 1 320px;min-width:280px;max-width:100%;padding:12px 14px;background:#FFFFFF;border:1px solid #E4E3DD;border-radius:12px;box-sizing:border-box;">
+      <div style="font-size:13px;font-weight:600;">场景 3 · 菜品迭代 raw 模板（混合换行）</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:6px;">堂食 A08 ｜ 2 道菜 ｜ 模板用 \n 分隔 + 菜名 4 字截断</div>
+      <div style="font-size:11px;margin-bottom:10px;"><span style="display:inline-block;background:rgba(82,196,26,.12);color:#389E0D;padding:1px 8px;border-radius:99px;">{菜品} 展开 2 行，\n 归一为 &lt;BR&gt;，尾部走纸+切刀</span></div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">① 前端传入（原始数据）</div>
+      <div class="c-in" style="font-family:Consolas,Menlo,monospace;font-size:11px;background:#F8F7F4;border:1px solid #EDEBE4;border-radius:8px;padding:8px 10px;word-break:break-all;white-space:pre-wrap;margin-bottom:10px;">&lt;CB&gt;点餐单&lt;/CB&gt;
+{if:用餐方式=堂食}台号：{桌号}{else}取餐码：{取餐码}{/if}
+{菜品} x{数量}  {金额}
+备注：{备注}</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">② 后端解析并下发（content）</div>
+      <div class="c-out" style="font-family:Consolas,Menlo,monospace;font-size:11px;background:#F8F7F4;border:1px solid #EDEBE4;border-radius:8px;padding:8px 10px;word-break:break-all;white-space:pre-wrap;margin-bottom:10px;">&lt;CB&gt;点餐单&lt;/CB&gt;&lt;BR&gt;台号：A08&lt;BR&gt;特色油边 x2  20.00&lt;BR&gt;秘制羊肉 x1  18.00&lt;BR&gt;备注：少油少盐&lt;BR&gt;&lt;BR&gt;&lt;BR&gt;&lt;CUT&gt;</div>
+      <div style="font-size:11px;color:#6B7280;margin-bottom:3px;">③ 打印机实际效果（58mm 模拟）</div>
+      <div class="ticket" style="background:#FFFFFF;border:1px dashed #C9C6BD;border-radius:8px;padding:10px 14px;max-width:220px;font-family:Consolas,Menlo,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;">点餐单
+台号：A08
+特色油边 x2  20.00
+秘制羊肉 x1  18.00
+备注：少油少盐
+<div style="border-top:1px dashed #B8B4A8;margin:8px -14px -10px;padding-top:2px;text-align:center;font-size:10px;color:#B8B4A8;">✂ 切刀 / 走纸</div></div>
+    </div>
+
+  </div>
+
+  <script>
+  (function(){
+    try {
+      function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+      function color(s){
+        var e = esc(s);
+        e = e.replace(/\{if:[^}]*\}|\{\/if\}|\{else\}/g,'<span style="color:#7C3AED;font-weight:600;">$&</span>');
+        e = e.replace(/(&lt;\/?[A-Za-z][A-Za-z0-9-]*&gt;)/g,'<span style="color:#1D6FB8;font-weight:600;">$1</span>');
+        e = e.replace(/\{[^}][^}]*\}/g,'<span style="color:#C2601B;font-weight:600;">$&</span>');
+        return e;
+      }
+      var els = document.querySelectorAll('.c-in,.c-out');
+      for (var i = 0; i < els.length; i++) { els[i].innerHTML = color(els[i].textContent); }
+    } catch(e) { console.error(e); }
+  })();
+  </script>
+</div>
+</html>

@@ -1,0 +1,60 @@
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Local debug environment ###
+.env.debug
+.local/
+!.env.debug.example
+.ai-backup*/
+.ai-runtime/
+.agents/
+skills-lock.json
+*.bak-*
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Runtime credentials and secret-bearing artifacts
+.env
+.env.*
+!.env.debug.example
+*.pem
+*.pfx
+*.p12
+*.key
+*.cer
+*.crt
+/src/main/resources/**/*.zip
+data/
+*.log

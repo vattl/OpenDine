@@ -1,0 +1,28 @@
+-- V014: 不可变支付账本表 (POS-SDC-101)
+CREATE TABLE IF NOT EXISTS `t_payment_ledger` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '流水自增ID',
+  `ledger_no` VARCHAR(64) NOT NULL COMMENT '权威资金流水号',
+  `request_id` VARCHAR(64) NOT NULL COMMENT '幂等请求ID',
+  `shop_id` INT NOT NULL COMMENT '门店ID',
+  `order_id` BIGINT NOT NULL COMMENT '订单ID',
+  `order_no` VARCHAR(64) NOT NULL COMMENT '订单号',
+  `terminal_id` VARCHAR(32) DEFAULT NULL COMMENT '收银机终端编号',
+  `drawer_session_id` BIGINT DEFAULT NULL COMMENT '钱箱会话ID',
+  `employee_shift_id` BIGINT DEFAULT NULL COMMENT '员工班次ID',
+  `operator_id` INT DEFAULT NULL COMMENT '操作人管理员ID',
+  `entry_type` VARCHAR(24) NOT NULL COMMENT '流水类型：PAYMENT/REFUND/REVERSAL/ADJUSTMENT',
+  `channel` VARCHAR(32) NOT NULL COMMENT '支付渠道：CASH/WECHAT/WECHAT_QR/ALIPAY/ALIPAY_QR/BALANCE_PRINCIPAL/GIFT/OTHER',
+  `amount_fen` INT NOT NULL COMMENT '资金金额(分)，正数为收入，负数为退款或冲正',
+  `status` VARCHAR(24) NOT NULL DEFAULT 'SUCCEEDED' COMMENT '流水状态：SUCCEEDED/FAILED/PENDING',
+  `provider_transaction_id` VARCHAR(128) DEFAULT NULL COMMENT '三方支付交易凭证号',
+  `original_ledger_id` BIGINT DEFAULT NULL COMMENT '关联原流水ID(退款或冲正必填)',
+  `occurred_at` DATETIME NOT NULL COMMENT '业务发生时间',
+  `business_day` VARCHAR(10) NOT NULL COMMENT '归属营业日(YYYY-MM-DD)',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '落账时间(不可修改)',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_payment_ledger_no` (`ledger_no`),
+  UNIQUE KEY `uk_payment_ledger_req` (`shop_id`, `request_id`, `entry_type`, `channel`),
+  KEY `idx_payment_ledger_order` (`shop_id`, `order_no`),
+  KEY `idx_payment_ledger_day_channel` (`shop_id`, `business_day`, `channel`),
+  KEY `idx_payment_ledger_operator` (`shop_id`, `operator_id`, `occurred_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='不可变支付流水账本' ROW_FORMAT=DYNAMIC;

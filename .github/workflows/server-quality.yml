@@ -1,0 +1,71 @@
+name: Server quality
+on:
+  push:
+    paths: ['server/**', '.github/workflows/server-quality.yml']
+  pull_request:
+    paths: ['server/**', '.github/workflows/server-quality.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: c007-ci-disposable-only
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s --health-timeout=5s --health-retries=12
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python scripts/check-release-security.py
+      - run: bash mvnw -B clean verify -Pprod,quality
+        env:
+          RUN_LOCAL_KDS_SMOKE: 'false'
+          C007_MYSQL_PASSWORD: c007-ci-disposable-only
+      - run: python scripts/check-release-security.py --jar target/diancan-0.0.1-SNAPSHOT.jar
+      - run: sha256sum target/diancan-0.0.1-SNAPSHOT.jar > target/artifact.sha256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: server-verification
+          path: |
+            server/target/surefire-reports/
+            server/target/site/jacoco/
+            server/target/bom.*
+            server/target/artifact.sha256
+  dependency-security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - run: bash mvnw -B org.owasp:dependency-check-maven:12.1.0:check -Psecurity-scan
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-security
+          path: server/target/dependency-check-report.*

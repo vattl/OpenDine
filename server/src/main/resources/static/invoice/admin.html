@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老肥家餐饮 · 财务人工开票工作台</title>
+    <style>
+        :root {
+            --primary: #1890ff;
+            --primary-hover: #40a9ff;
+            --success: #52c41a;
+            --warning: #faad14;
+            --danger: #f5222d;
+            --text-title: #1f1f1f;
+            --text-body: #434343;
+            --text-sub: #8c8c8c;
+            --bg-page: #f0f2f5;
+            --bg-card: #ffffff;
+            --border: #e8e8e8;
+            --radius: 8px;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-body);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .top-navbar {
+            background: #001529;
+            color: #fff;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        .brand-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .brand-tag {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: normal;
+        }
+        .user-box {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .main-layout {
+            max-width: 1360px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .notice-banner {
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #0050b3;
+        }
+        .notice-banner strong { font-weight: 600; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .metric-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid #d9d9d9;
+        }
+        .metric-card.warning { border-left-color: var(--warning); }
+        .metric-card.success { border-left-color: var(--success); }
+        .metric-card.info { border-left-color: var(--primary); }
+        .metric-card.danger { border-left-color: var(--danger); }
+        .metric-label { font-size: 13px; color: var(--text-sub); margin-bottom: 4px; }
+        .metric-value { font-size: 26px; font-weight: 700; color: var(--text-title); display: flex; align-items: baseline; gap: 6px; }
+        .metric-unit { font-size: 13px; font-weight: normal; color: var(--text-sub); }
+        .metric-hint { font-size: 12px; color: var(--text-sub); margin-top: 4px; }
+
+        .workspace-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .filter-toolbar {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .tabs-group {
+            display: flex;
+            gap: 8px;
+        }
+        .tab-btn {
+            border: 1px solid var(--border);
+            background: #fff;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-body);
+        }
+        .tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+        .tab-badge {
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 4px;
+        }
+        .tab-btn.active .tab-badge {
+            background: #fff;
+            color: var(--primary);
+        }
+
+        .search-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .search-input {
+            width: 240px;
+            height: 32px;
+            padding: 0 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+        }
+        .search-input:focus { border-color: var(--primary); }
+        .btn {
+            height: 32px;
+            padding: 0 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-default { background: #fff; border-color: var(--border); color: var(--text-body); }
+        .btn-default:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-xs { height: 26px; padding: 0 8px; font-size: 12px; border-radius: 3px; }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        .data-table th {
+            background: #fafafa;
+            color: var(--text-title);
+            padding: 12px 14px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .data-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .data-table tbody tr:hover { background: #fcfcfc; }
+
+        .status-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .status-tag.waiting { background: #fffbe6; color: #d46b08; border: 1px solid #ffe58f; }
+        .status-tag.done { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+        .status-tag.rejected { background: #fff1f0; color: #cf1322; border: 1px solid #ffa39e; }
+        .status-tag.pending { background: #e6f7ff; color: #096dd9; border: 1px solid #91d5ff; }
+
+        .tax-no-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: Consolas, Monaco, monospace;
+            font-weight: 600;
+            color: #262626;
+        }
+        .btn-copy {
+            background: #f0f0f0;
+            border: 1px solid #d9d9d9;
+            color: #595959;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        .btn-copy:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-card {
+            background: #fff;
+            border-radius: 8px;
+            width: 520px;
+            max-width: 90%;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+            overflow: hidden;
+            animation: modalFadeIn 0.2s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-header {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--text-sub);
+        }
+        .modal-body {
+            padding: 16px 20px;
+            max-height: 75vh;
+            overflow-y: auto;
+        }
+        .modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #fafafa;
+        }
+        .form-row {
+            margin-bottom: 14px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-title);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .form-label .req { color: var(--danger); margin-right: 4px; }
+        .form-control {
+            width: 100%;
+            height: 36px;
+            padding: 0 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+        }
+        .form-control:focus { border-color: var(--primary); }
+        .form-textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            resize: vertical;
+        }
+        .form-textarea:focus { border-color: var(--primary); }
+        .readonly-box {
+            background: #fafafa;
+            border: 1px solid #f0f0f0;
+            border-radius: 4px;
+            padding: 10px 12px;
+            font-size: 13px;
+            margin-bottom: 14px;
+        }
+        .readonly-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        .readonly-item:last-child { margin-bottom: 0; }
+        .readonly-key { color: var(--text-sub); width: 80px; }
+        .readonly-val { font-weight: 500; flex: 1; text-align: right; }
+
+        .toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            z-index: 2000;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn-auth-top {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #fff;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-auth-top:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #fff;
+        }
+        .btn-auth-top.btn-login-highlight {
+            background: var(--primary);
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+        .btn-auth-top.btn-login-highlight:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .auth-tab-btn {
+            border: 1px solid var(--border);
+            background: #f5f5f5;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-body);
+        }
+        .auth-tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .top-navbar {
+                height: auto;
+                padding: 12px 16px;
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            .user-box {
+                width: 100%;
+                justify-content: space-between;
+                flex-wrap: wrap;
+                font-size: 12px;
+                gap: 10px;
+            }
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+            .filter-toolbar { flex-direction: column; align-items: stretch; }
+            .search-input { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="top-navbar">
+        <div class="brand-box">
+            <span>老肥家餐饮连锁</span>
+            <span class="brand-tag">财务开票管理工作台</span>
+        </div>
+        <div class="user-box">
+            <div id="shopSelectorBox" style="display: flex; align-items: center; gap: 6px;">
+                <span id="currentShopInfo">🏢 门店：未登录</span>
+                <select id="shopSelect" onchange="onShopChange(this.value)" style="display: none; background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.35); border-radius: 4px; padding: 2px 6px; font-size: 12px; outline: none; cursor: pointer;">
+                    <option value="" style="background: #001529; color: #fff;">全部门店 (汇总)</option>
+                </select>
+                <button type="button" id="btnOpenTaxBureauTop" onclick="handleOpenCurrentShopTaxBureau()" title="根据门店地址一键打开当地官方电子税务局开票网站" style="display: none; background: #096dd9; color: #fff; border: 1px solid rgba(255,255,255,0.4); border-radius: 4px; padding: 2px 8px; font-size: 12px; cursor: pointer; align-items: center; gap: 4px; font-weight: 500;">
+                    🏛️ 打开当地电子税局
+                </button>
+            </div>
+            <span id="currentAdminInfo">👤 未登录 (访客)</span>
+            <button type="button" class="btn-auth-top btn-login-highlight" id="btnUserAuthAction" onclick="handleUserAuthBtnClick()">🔐 立即登录</button>
+        </div>
+    </header>
+
+    <main class="main-layout">
+        <div class="notice-banner">
+            <div>
+                <strong>模式说明与独立纳税主体合规：</strong>各门店均为<strong>独立纳税主体</strong>（独立税号与独立税控盘/数电开票账号）。顾客扫码提交发票抬头后，财务白天登录对应门店的电子税务局/税控系统开具，并录入发票号码归档。<strong>⚠️ 严禁跨门店错开、代开发票。</strong>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" class="btn btn-default btn-xs" onclick="handleOpenCurrentShopTaxBureau()" style="background: #e6f7ff; color: #096dd9; border-color: #91d5ff; font-weight: 600;">🏛️ 一键打开税局开票网</button>
+                <button type="button" class="btn btn-default btn-xs" onclick="fetchInvoiceList()">🔄 刷新数据</button>
+            </div>
+        </div>
+
+        <section class="metrics-grid">
+            <div class="metric-card warning">
+                <div class="metric-label">待人工开票 (待办)</div>
+                <div class="metric-value" id="countWaiting">0 <span class="metric-unit">笔</span></div>
+                <div class="metric-hint">顾客已提交抬头，待财务开具</div>
+            </div>
+            <div class="metric-card success">
+                <div class="metric-label">今日已完成开票</div>
+                <div class="metric-value" id="countSuccess">0 <span class="metric-unit">笔</span></div>
+                <div class="metric-hint">已录入税控发票号码</div>
+            </div>
+            <div class="metric-card info">
+                <div class="metric-label">顾客填写中</div>
+                <div class="metric-value" id="countPendingScan">0 <span class="metric-unit">笔</span></div>
+                <div class="metric-hint">扫码后尚未提交抬头</div>
+            </div>
+            <div class="metric-card danger">
+                <div class="metric-label">已驳回/异常单</div>
+                <div class="metric-value" id="countRejected">0 <span class="metric-unit">笔</span></div>
+                <div class="metric-hint">税号错误待顾客修改</div>
+            </div>
+        </section>
+
+        <section class="workspace-card">
+            <div class="filter-toolbar">
+                <div class="tabs-group">
+                    <button class="tab-btn active" onclick="switchTab('ALL', this)">全部申请</button>
+                    <button class="tab-btn" onclick="switchTab('TITLE_SUBMITTED', this)">待开票 <span class="tab-badge" id="badgeWaiting">0</span></button>
+                    <button class="tab-btn" onclick="switchTab('SUCCESS', this)">已开具</button>
+                    <button class="tab-btn" onclick="switchTab('REJECTED', this)">已驳回</button>
+                </div>
+                <div class="search-group">
+                    <input type="text" class="search-input" id="searchKeyword" placeholder="搜索订单号 / 抬头 / 手机号..." onkeyup="onSearchKeyup(event)">
+                    <button type="button" class="btn btn-primary" onclick="fetchInvoiceList()">🔍 搜索</button>
+                    <button type="button" class="btn btn-default" onclick="exportData()">📥 导出Excel</button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table" id="invoiceTable">
+                    <thead>
+                        <tr>
+                            <th>申请单号 / 订单号</th>
+                            <th>开票门店 (独立纳税主体)</th>
+                            <th>申请时间</th>
+                            <th>开票金额</th>
+                            <th>抬头类型</th>
+                            <th>发票抬头名称</th>
+                            <th>统一社会信用代码 / 税号</th>
+                            <th>接收联系方式</th>
+                            <th>状态</th>
+                            <th>微信卡包状态</th>
+                            <th style="text-align: right;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="11" style="text-align:center; padding: 40px; color: #8c8c8c;">正在加载开票申请数据...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <!-- 弹窗：录入已开具发票数据 (Issue Modal) -->
+    <div class="modal-overlay" id="issueModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span>录入发票开具结果 (确认开票)</span>
+                <button type="button" class="modal-close" onclick="closeModal('issueModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #e6f7ff; border: 1px solid #91d5ff; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px;">
+                    <div style="font-size: 13px; font-weight: 600; color: #0050b3; display: flex; align-items: center; justify-content: space-between;">
+                        <span>🏢 销方（开票方）主体：</span>
+                        <span id="issueShopName" style="color: #1890ff; font-weight: 700;">--</span>
+                    </div>
+                    <div style="font-size: 12px; color: #595959; margin-top: 4px; line-height: 1.5;">
+                        📍 <strong>门店地址</strong>：<span id="issueShopAddress" style="color: #262626;">--</span>
+                    </div>
+                    <div style="font-size: 12px; color: #096dd9; margin-top: 4px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                        <span>🏛️ <strong>所属税局</strong>：<span id="issueTaxBureauName" style="font-weight: 600;">--</span></span>
+                        <a id="issueTaxBureauLink" href="https://etax.chinatax.gov.cn/" target="_blank" style="color: #096dd9; text-decoration: underline; font-weight: bold; cursor: pointer;">🌐 打开当地税局开票系统 ↗</a>
+                    </div>
+                    <div style="font-size: 12px; color: #8c8c8c; margin-top: 4px; line-height: 1.5;">
+                        ⚠️ <strong>独立纳税主体防错提示</strong>：该门店为独立纳税主体。请核对您当前税控盘/税局账号为该门店，发票抬头开具给购方，严禁跨主体开具。
+                    </div>
+                </div>
+
+                <div class="readonly-box">
+                    <div class="readonly-item"><span class="readonly-key">订单编号:</span><span class="readonly-val" id="issueOrderNo">--</span></div>
+                    <div class="readonly-item"><span class="readonly-key">销方门店:</span><span class="readonly-val" id="issueShopDetail">--</span></div>
+                    <div class="readonly-item"><span class="readonly-key">开票金额:</span><span class="readonly-val" id="issueAmount" style="color: #fa5151; font-weight: 700;">--</span></div>
+                    <div class="readonly-item"><span class="readonly-key">发票抬头:</span><span class="readonly-val" id="issueTitle">--</span></div>
+                    <div class="readonly-item"><span class="readonly-key">企业税号:</span><span class="readonly-val" id="issueTaxNo" style="font-family: monospace;">--</span></div>
+                </div>
+
+                <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+                    <button type="button" class="btn btn-default btn-sm" onclick="copyIssueBuyerInfo()" style="flex: 1; background: #fafafa; border: 1px dashed #1890ff; color: #1890ff; font-weight: 600; padding: 6px 10px;">
+                        📋 一键复制开票资料 (抬头/税号/地址/银行)
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openIssueTaxBureauDirect()" style="flex: 1; background: #096dd9; padding: 6px 10px;">
+                        🌐 直达当地电子税局开票 ↗
+                    </button>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label"><span class="req">*</span>发票号码 (Fapiao Number)</label>
+                    <input type="text" class="form-control" id="inputFapiaoNumber" placeholder="请输入税务局/税控盘开具的20位或8位发票号码" maxlength="32">
+                </div>
+                <div class="form-row">
+                    <label class="form-label">发票代码 (选填)</label>
+                    <input type="text" class="form-control" id="inputFapiaoCode" placeholder="传统电子发票需填写10-12位代码；数电发票可留空">
+                </div>
+                <div class="form-row">
+                    <label class="form-label">电子发票下载链接 (选填)</label>
+                    <input type="url" class="form-control" id="inputFapiaoFileUrl" placeholder="如已导出PDF/OFD，可粘贴外网访问链接(https://...)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" onclick="closeModal('issueModal')">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitIssue()">确认已开票</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：驳回开票申请 (Reject Modal) -->
+    <div class="modal-overlay" id="rejectModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <span>驳回开票申请</span>
+                <button type="button" class="modal-close" onclick="closeModal('rejectModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="readonly-box">
+                    <div class="readonly-item"><span class="readonly-key">订单编号:</span><span class="readonly-val" id="rejectOrderNo">--</span></div>
+                    <div class="readonly-item"><span class="readonly-key">所属门店:</span><span class="readonly-val" id="rejectShopDetail">--</span></div>
+                    <div class="readonly-item"><span class="readonly-key">发票抬头:</span><span class="readonly-val" id="rejectTitle">--</span></div>
+                </div>
+
+                <div class="form-row">
+                    <label class="form-label"><span class="req">*</span>驳回原因快捷选择</label>
+                    <select class="form-control" id="rejectQuickReason" onchange="onSelectRejectReason(this.value)">
+                        <option value="">-- 请选择常见驳回理由 --</option>
+                        <option value="纳税人识别号位数不符或校验不通过，请核对执照信息">税号位数不符或校验不通过</option>
+                        <option value="发票抬头与税号不匹配，请核对全称后重新提交">抬头与税号不匹配</option>
+                        <option value="开票申请所属门店主体与税号不符，请核对就餐门店后重新申请">就餐门店/纳税主体不符</option>
+                        <option value="该笔订单已办理部分退款，开票金额需重新核算">订单含退款需重新核算</option>
+                        <option value="预留联系邮箱/手机号无法送达，请补全联系方式">联系方式有误</option>
+                        <option value="CUSTOM">其他自定义原因...</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <label class="form-label"><span class="req">*</span>驳回详细说明 (顾客端将可见此说明)</label>
+                    <textarea class="form-textarea" id="rejectDetailMsg" rows="3" placeholder="请输入具体原因，以便顾客在申请页面核对修改..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" onclick="closeModal('rejectModal')">取消</button>
+                <button type="button" class="btn btn-danger" onclick="submitReject()">确认驳回申请</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：财务与管理员鉴权登录 (Login Modal) -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-card" style="width: 440px;">
+            <div class="modal-header">
+                <span id="loginModalTitle">🔐 财务与管理员鉴权登录</span>
+                <button type="button" class="modal-close" onclick="closeModal('loginModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+                    <button type="button" class="auth-tab-btn active" id="authTabPwd" onclick="switchAuthTab('pwd')">账号工号登录</button>
+                    <button type="button" class="auth-tab-btn" id="authTabToken" onclick="switchAuthTab('token')">快捷 Token 凭据</button>
+                </div>
+
+                <!-- 账号密码表单 -->
+                <div id="authPwdForm">
+                    <div class="form-row">
+                        <label class="form-label"><span class="req">*</span>工号或用户名</label>
+                        <input type="text" class="form-control" id="loginAccount" placeholder="请输入管理员用户名或工号 (如 admin / EMP1001)" autocomplete="username" onkeyup="if(event.key==='Enter')document.getElementById('loginPassword').focus()">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label"><span class="req">*</span>登录密码</label>
+                        <input type="password" class="form-control" id="loginPassword" placeholder="请输入密码" autocomplete="current-password" onkeyup="if(event.key==='Enter')submitAuth()">
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-sub); margin-top: 8px;">
+                        <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                            <input type="checkbox" id="loginRememberMe" checked> 保持登录状态
+                        </label>
+                        <span>支持全局超管 / 财务岗位账号</span>
+                    </div>
+                </div>
+
+                <!-- 直接 Token 录入 -->
+                <div id="authTokenForm" style="display: none;">
+                    <div class="form-row">
+                        <label class="form-label"><span class="req">*</span>粘贴 JWT 访问凭据 (Bearer Token)</label>
+                        <textarea class="form-textarea" id="inputManualToken" rows="4" placeholder="粘贴已有管理员 Bearer JWT Token (可附带或不附带 'Bearer ')"></textarea>
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-sub); line-height: 1.6;">
+                        💡 适用于已在 POS 机端、运营后台或通过授权链接获得 Token 的工作人员直接粘贴使用。
+                    </div>
+                </div>
+
+                <!-- 错误提示区 -->
+                <div id="loginErrorAlert" style="display: none; margin-top: 14px; padding: 8px 12px; background: #fff1f0; border: 1px solid #ffa39e; border-radius: 4px; font-size: 12px; color: #cf1322;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" onclick="closeModal('loginModal')">暂不登录</button>
+                <button type="button" class="btn btn-primary" id="btnLoginSubmit" onclick="submitAuth()">立即登录</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗：各门店电子税务局直达导航 (Tax Bureau Modal) -->
+    <div class="modal-overlay" id="taxBureauPickerModal">
+        <div class="modal-card" style="max-width: 680px;">
+            <div class="modal-header">
+                <span>🏛️ 各门店电子税务局开票直达导航</span>
+                <button type="button" class="modal-close" onclick="closeModal('taxBureauPickerModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #e6f7ff; border: 1px solid #91d5ff; border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #0050b3; line-height: 1.5;">
+                    💡 <strong>税局直达说明</strong>：系统已根据各门店在工商/税务登记的详细地址，精准匹配国家税务总局全国统一规范电子税务局及各省市电子税局（含深圳等计划单列市）。请点击目标门店后在新页面登录该门店税控/数电账号进行开票。
+                </div>
+                <div id="taxBureauShopList" style="max-height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                    <!-- dynamic rows -->
+                </div>
+                <div style="margin-top: 14px; padding-top: 10px; border-top: 1px dashed #e8e8e8; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-size: 12px; color: #8c8c8c;">未找到匹配税局，或需进入国家统一平台：</span>
+                    <a href="https://etax.chinatax.gov.cn/" target="_blank" class="btn btn-default btn-sm" style="color: #096dd9; border-color: #91d5ff; font-weight: 600;">
+                        🌐 国家统一规范电子税务局总平台 ↗
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" onclick="closeModal('taxBureauPickerModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toastMsg"></div>
+
+    <script>
+        let currentStatusFilter = '';
+        let currentTargetOrderNo = null;
+        let invoiceList = [];
+        let currentAuthTab = 'pwd';
+        let currentShopId = localStorage.getItem('admin_shop_id') || '';
+        let currentShopCode = localStorage.getItem('admin_shop_code') || '';
+        let currentIssueTaxBureauUrl = 'https://etax.chinatax.gov.cn/';
+        let currentIssueTaxBureauName = '国家税务总局全国统一规范电子税务局';
+
+        // 全国统一规范电子税务局门户规则（含计划单列市优先匹配）
+        const TAX_BUREAU_RULES = [
+            // 1. 计划单列市（必须优先于所属省份匹配）
+            { region: '深圳', name: '国家税务总局深圳市电子税务局', url: 'https://etax.shenzhen.chinatax.gov.cn/', keywords: ['深圳'] },
+            { region: '大连', name: '国家税务总局大连市电子税务局', url: 'https://etax.dalian.chinatax.gov.cn/', keywords: ['大连'] },
+            { region: '青岛', name: '国家税务总局青岛市电子税务局', url: 'https://etax.qingdao.chinatax.gov.cn/', keywords: ['青岛'] },
+            { region: '宁波', name: '国家税务总局宁波市电子税务局', url: 'https://etax.ningbo.chinatax.gov.cn/', keywords: ['宁波'] },
+            { region: '厦门', name: '国家税务总局厦门市电子税务局', url: 'https://etax.xiamen.chinatax.gov.cn/', keywords: ['厦门'] },
+            // 2. 直辖市
+            { region: '北京', name: '国家税务总局北京市电子税务局', url: 'https://etax.beijing.chinatax.gov.cn/', keywords: ['北京', '朝阳区', '海淀区', '西城区', '东城区', '丰台区', '昌平区', '通州区', '大兴区', '顺义区'] },
+            { region: '上海', name: '国家税务总局上海市电子税务局', url: 'https://etax.shanghai.chinatax.gov.cn/', keywords: ['上海', '浦东新区', '黄浦区', '徐汇区', '静安区', '长宁区', '普陀区', '虹口区', '杨浦区', '闵行区'] },
+            { region: '天津', name: '国家税务总局天津市电子税务局', url: 'https://etax.tianjin.chinatax.gov.cn/', keywords: ['天津', '和平区', '南开区', '河西区', '河东区', '滨海新区'] },
+            { region: '重庆', name: '国家税务总局重庆市电子税务局', url: 'https://etax.chongqing.chinatax.gov.cn/', keywords: ['重庆', '渝中区', '江北区', '渝北区', '沙坪坝', '九龙坡', '南岸区'] },
+            // 3. 各省及主要地级市
+            { region: '广东', name: '国家税务总局广东省电子税务局', url: 'https://etax.guangdong.chinatax.gov.cn/', keywords: ['广东', '广州', '东莞', '佛山', '中山', '珠海', '惠州', '江门', '汕头', '湛江', '肇庆', '清远', '潮州', '韶关', '梅州', '茂名', '阳江', '揭阳', '汕尾', '河源', '云浮'] },
+            { region: '浙江', name: '国家税务总局浙江省电子税务局', url: 'https://etax.zhejiang.chinatax.gov.cn/', keywords: ['浙江', '杭州', '温州', '嘉兴', '湖州', '绍兴', '金华', '衢州', '舟山', '台州', '丽水'] },
+            { region: '江苏', name: '国家税务总局江苏省电子税务局', url: 'https://etax.jiangsu.chinatax.gov.cn/', keywords: ['江苏', '南京', '苏州', '无锡', '常州', '南通', '扬州', '镇江', '泰州', '盐城', '淮安', '连云港', '宿迁', '徐州'] },
+            { region: '山东', name: '国家税务总局山东省电子税务局', url: 'https://etax.shandong.chinatax.gov.cn/', keywords: ['山东', '济南', '烟台', '潍坊', '淄博', '威海', '临沂', '德州', '聊城', '滨州', '菏泽', '泰安', '日照', '枣庄', '济宁', '东营'] },
+            { region: '福建', name: '国家税务总局福建省电子税务局', url: 'https://etax.fujian.chinatax.gov.cn/', keywords: ['福建', '福州', '泉州', '漳州', '莆田', '宁德', '南平', '三明', '龙岩'] },
+            { region: '四川', name: '国家税务总局四川省电子税务局', url: 'https://etax.sichuan.chinatax.gov.cn/', keywords: ['四川', '成都', '绵阳', '德阳', '宜宾', '南充', '泸州', '达州', '乐山', '凉山', '广元', '遂宁', '内江', '眉山', '广安', '资阳', '攀枝花', '雅安', '巴中', '阿坝', '甘孜'] },
+            { region: '湖北', name: '国家税务总局湖北省电子税务局', url: 'https://etax.hubei.chinatax.gov.cn/', keywords: ['湖北', '武汉', '襄阳', '宜昌', '荆州', '黄冈', '孝感', '荆门', '十堰', '黄石', '咸宁', '随州', '恩施', '仙桃', '潜江', '天门', '神农架'] },
+            { region: '湖南', name: '国家税务总局湖南省电子税务局', url: 'https://etax.hunan.chinatax.gov.cn/', keywords: ['湖南', '长沙', '株洲', '湘潭', '衡阳', '岳阳', '常德', '郴州', '益阳', '永州', '怀化', '娄底', '邵阳', '张家界', '湘西'] },
+            { region: '河南', name: '国家税务总局河南省电子税务局', url: 'https://etax.henan.chinatax.gov.cn/', keywords: ['河南', '郑州', '洛阳', '南阳', '许昌', '周口', '新乡', '安阳', '驻马店', '信阳', '开封', '商丘', '焦作', '平顶山', '濮阳', '漯河', '鹤壁', '三门峡', '济源'] },
+            { region: '河北', name: '国家税务总局河北省电子税务局', url: 'https://etax.hebei.chinatax.gov.cn/', keywords: ['河北', '石家庄', '保定', '唐山', '廊坊', '邯郸', '沧州', '邢台', '秦皇岛', '张家口', '承德', '衡水', '雄安'] },
+            { region: '陕西', name: '国家税务总局陕西省电子税务局', url: 'https://etax.shaanxi.chinatax.gov.cn/', keywords: ['陕西', '西安', '咸阳', '宝鸡', '渭南', '榆林', '汉中', '延安', '安康', '商洛', '铜川'] },
+            { region: '安徽', name: '国家税务总局安徽省电子税务局', url: 'https://etax.anhui.chinatax.gov.cn/', keywords: ['安徽', '合肥', '芜湖', '蚌埠', '阜阳', '滁州', '安庆', '马鞍山', '六安', '宿州', '亳州', '淮南', '淮北', '铜陵', '黄山', '池州', '宣城'] },
+            { region: '江西', name: '国家税务总局江西省电子税务局', url: 'https://etax.jiangxi.chinatax.gov.cn/', keywords: ['江西', '南昌', '赣州', '九江', '宜春', '吉安', '上饶', '抚州', '萍乡', '景德镇', '新余', '鹰潭'] },
+            { region: '辽宁', name: '国家税务总局辽宁省电子税务局', url: 'https://etax.liaoning.chinatax.gov.cn/', keywords: ['辽宁', '沈阳', '鞍山', '抚顺', '本溪', '丹东', '锦州', '营口', '阜新', '辽阳', '盘锦', '铁岭', '朝阳', '葫芦岛'] },
+            { region: '吉林', name: '国家税务总局吉林省电子税务局', url: 'https://etax.jilin.chinatax.gov.cn/', keywords: ['吉林', '长春', '吉林市', '四平', '通化', '白城', '辽源', '松原', '白山', '延边'] },
+            { region: '黑龙江', name: '国家税务总局黑龙江省电子税务局', url: 'https://etax.heilongjiang.chinatax.gov.cn/', keywords: ['黑龙江', '哈尔滨', '大庆', '齐齐哈尔', '牡丹江', '佳木斯', '绥化', '鸡西', '双鸭山', '伊春', '七台河', '鹤岗', '黑河', '大兴安岭'] },
+            { region: '广西', name: '国家税务总局广西壮族自治区电子税务局', url: 'https://etax.guangxi.chinatax.gov.cn/', keywords: ['广西', '南宁', '桂林', '柳州', '玉林', '百色', '钦州', '贵港', '北海', '梧州', '防城港', '崇左', '来宾', '贺州', '河池'] },
+            { region: '海南', name: '国家税务总局海南省电子税务局', url: 'https://etax.hainan.chinatax.gov.cn/', keywords: ['海南', '海口', '三亚', '儋州', '琼海', '文昌', '万宁', '东方', '澄迈'] },
+            { region: '贵州', name: '国家税务总局贵州省电子税务局', url: 'https://etax.guizhou.chinatax.gov.cn/', keywords: ['贵州', '贵阳', '遵义', '毕节', '六盘水', '安顺', '铜仁', '黔东南', '黔南', '黔西南'] },
+            { region: '云南', name: '国家税务总局云南省电子税务局', url: 'https://etax.yunnan.chinatax.gov.cn/', keywords: ['云南', '昆明', '曲靖', '玉溪', '昭通', '保山', '丽江', '普洱', '临沧', '大理', '红河', '楚雄', '文山', '西双版纳', '德宏'] },
+            { region: '山西', name: '国家税务总局山西省电子税务局', url: 'https://etax.shanxi.chinatax.gov.cn/', keywords: ['山西', '太原', '大同', '运城', '长治', '晋中', '临汾', '吕梁', '晋城', '阳泉', '朔州', '忻州'] },
+            { region: '内蒙古', name: '国家税务总局内蒙古自治区电子税务局', url: 'https://etax.neimenggu.chinatax.gov.cn/', keywords: ['内蒙古', '呼和浩特', '包头', '鄂尔多斯', '赤峰', '通辽', '呼伦贝尔', '巴彦淖尔', '乌兰察布', '乌海', '兴安', '锡林郭勒', '阿拉善'] },
+            { region: '甘肃', name: '国家税务总局甘肃省电子税务局', url: 'https://etax.gansu.chinatax.gov.cn/', keywords: ['甘肃', '兰州', '天水', '白银', '平凉', '庆阳', '定西', '武威', '张掖', '酒泉', '嘉峪关', '陇南', '金昌', '临夏', '甘南'] },
+            { region: '青海', name: '国家税务总局青海省电子税务局', url: 'https://etax.qinghai.chinatax.gov.cn/', keywords: ['青海', '西宁', '海东', '海北', '海南州', '黄南', '果洛', '玉树', '海西'] },
+            { region: '宁夏', name: '国家税务总局宁夏回族自治区电子税务局', url: 'https://etax.ningxia.chinatax.gov.cn/', keywords: ['宁夏', '银川', '石嘴山', '吴忠', '固原', '中卫'] },
+            { region: '新疆', name: '国家税务总局新疆维吾尔自治区电子税务局', url: 'https://etax.xinjiang.chinatax.gov.cn/', keywords: ['新疆', '乌鲁木齐', '昌吉', '伊犁', '喀什', '阿克苏', '巴音郭楞', '克拉玛依', '和田', '塔城', '阿勒泰', '吐鲁番', '哈密', '克孜勒苏', '博尔塔拉'] },
+            { region: '西藏', name: '国家税务总局西藏自治区电子税务局', url: 'https://etax.xizang.chinatax.gov.cn/', keywords: ['西藏', '拉萨', '日喀则', '昌都', '林芝', '山南', '那曲', '阿里'] }
+        ];
+
+        function resolveTaxBureau(address, fallbackUrl, fallbackName) {
+            if (fallbackUrl && fallbackName) {
+                return { name: fallbackName, url: fallbackUrl };
+            }
+            if (!address || typeof address !== 'string' || !address.trim()) {
+                return { name: '国家税务总局全国统一规范电子税务局', url: 'https://etax.chinatax.gov.cn/' };
+            }
+            const clean = address.trim();
+            for (let r of TAX_BUREAU_RULES) {
+                for (let kw of r.keywords) {
+                    if (clean.includes(kw)) {
+                        return { name: r.name, url: r.url };
+                    }
+                }
+            }
+            return { name: '国家税务总局全国统一规范电子税务局', url: 'https://etax.chinatax.gov.cn/' };
+        }
+
+        function escapeAttr(str) {
+            if (!str) return '';
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toastMsg');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 2500);
+        }
+
+        function getStoredToken() {
+            return (localStorage.getItem('admin_token') || localStorage.getItem('token') || '').trim();
+        }
+
+        function getAuthHeaders() {
+            const headers = { 'Content-Type': 'application/json' };
+            const token = getStoredToken();
+            if (token) {
+                headers['token'] = token;
+                headers['Authorization'] = 'Bearer ' + token;
+            }
+            if (currentShopId) {
+                headers['X-Shop-Id'] = String(currentShopId);
+            }
+            if (currentShopCode) {
+                headers['X-Shop-Code'] = String(currentShopCode);
+            }
+            return headers;
+        }
+
+        function initAuthFromUrlAndStorage() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const urlToken = params.get('token') || params.get('admin_token') || params.get('jwt') || params.get('authorization');
+                if (urlToken) {
+                    const cleanToken = urlToken.replace(/^Bearer\s+/i, '').trim();
+                    if (cleanToken) {
+                        localStorage.setItem('admin_token', cleanToken);
+                        localStorage.setItem('token', cleanToken);
+                        params.delete('token');
+                        params.delete('admin_token');
+                        params.delete('jwt');
+                        params.delete('authorization');
+                    }
+                }
+                const urlShopId = params.get('shopId') || params.get('shop_id');
+                const urlShopCode = params.get('shopCode') || params.get('shop_code');
+                if (urlShopId) {
+                    currentShopId = urlShopId;
+                    localStorage.setItem('admin_shop_id', urlShopId);
+                    params.delete('shopId');
+                    params.delete('shop_id');
+                }
+                if (urlShopCode) {
+                    currentShopCode = urlShopCode;
+                    localStorage.setItem('admin_shop_code', urlShopCode);
+                    params.delete('shopCode');
+                    params.delete('shop_code');
+                }
+                const newSearch = params.toString() ? ('?' + params.toString()) : '';
+                window.history.replaceState({}, document.title, window.location.pathname + newSearch);
+                if (urlToken) {
+                    showToast('已从 URL 加载登录凭据');
+                }
+            } catch (e) {
+                console.warn('URL token/shop parse error:', e);
+            }
+        }
+
+        function updateUserBarUI() {
+            const token = getStoredToken();
+            const adminInfoEl = document.getElementById('currentAdminInfo');
+            const shopInfoEl = document.getElementById('currentShopInfo');
+            const shopSelect = document.getElementById('shopSelect');
+            const authBtn = document.getElementById('btnUserAuthAction');
+
+            const taxTopBtn = document.getElementById('btnOpenTaxBureauTop');
+            if (!token) {
+                adminInfoEl.textContent = '👤 未登录 (访客)';
+                shopInfoEl.textContent = '🏢 门店：未登录';
+                shopInfoEl.style.display = 'inline';
+                if (shopSelect) shopSelect.style.display = 'none';
+                if (taxTopBtn) taxTopBtn.style.display = 'none';
+                authBtn.textContent = '🔐 立即登录';
+                authBtn.className = 'btn-auth-top btn-login-highlight';
+                return;
+            }
+
+            const realName = localStorage.getItem('admin_real_name') || localStorage.getItem('admin_name') || localStorage.getItem('admin_username');
+            const workNo = localStorage.getItem('admin_work_no');
+            const scope = localStorage.getItem('admin_scope');
+            let shops = [];
+            try {
+                shops = JSON.parse(localStorage.getItem('admin_shops') || '[]');
+            } catch (e) {
+                shops = [];
+            }
+
+            let adminDisplay = '👤 ' + (realName || '已登录员工');
+            if (workNo) adminDisplay += ` (${workNo})`;
+            adminInfoEl.textContent = adminDisplay;
+
+            // 门店下拉与展示
+            if (shops && shops.length > 0) {
+                shopInfoEl.style.display = 'none';
+                shopSelect.style.display = 'inline-block';
+                shopSelect.innerHTML = '';
+                if (scope === 'HQ') {
+                    const optAll = document.createElement('option');
+                    optAll.value = '';
+                    optAll.textContent = '🏢 全部门店 (汇总)';
+                    optAll.style.background = '#001529';
+                    optAll.style.color = '#fff';
+                    shopSelect.appendChild(optAll);
+                }
+                shops.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = `🏢 ${s.name || s.shopName || ('门店' + s.id)} (独立主体)`;
+                    opt.style.background = '#001529';
+                    opt.style.color = '#fff';
+                    if (s.code || s.shopCode) {
+                        opt.setAttribute('data-code', s.code || s.shopCode);
+                    }
+                    shopSelect.appendChild(opt);
+                });
+                if (currentShopId) {
+                    shopSelect.value = currentShopId;
+                } else if (scope !== 'HQ' && shops.length > 0) {
+                    currentShopId = String(shops[0].id);
+                    localStorage.setItem('admin_shop_id', currentShopId);
+                    if (shops[0].code) {
+                        currentShopCode = shops[0].code;
+                        localStorage.setItem('admin_shop_code', currentShopCode);
+                    }
+                    shopSelect.value = currentShopId;
+                }
+            } else {
+                shopSelect.style.display = 'none';
+                shopInfoEl.style.display = 'inline';
+                shopInfoEl.textContent = '🏢 ' + (scope === 'HQ' ? '总部 / 全部门店' : ((localStorage.getItem('admin_shop_name') || '所属门店') + ' (独立纳税主体)'));
+            }
+
+            if (taxTopBtn) taxTopBtn.style.display = 'inline-flex';
+            authBtn.textContent = '退出 / 切换';
+            authBtn.className = 'btn-auth-top';
+        }
+
+        function onShopChange(val) {
+            currentShopId = val || '';
+            if (currentShopId) {
+                localStorage.setItem('admin_shop_id', currentShopId);
+            } else {
+                localStorage.removeItem('admin_shop_id');
+            }
+            const shopSelect = document.getElementById('shopSelect');
+            const selectedOpt = shopSelect.options[shopSelect.selectedIndex];
+            const code = selectedOpt ? selectedOpt.getAttribute('data-code') : '';
+            if (code) {
+                currentShopCode = code;
+                localStorage.setItem('admin_shop_code', code);
+            } else {
+                currentShopCode = '';
+                localStorage.removeItem('admin_shop_code');
+            }
+            fetchInvoiceList();
+        }
+
+        function handleUserAuthBtnClick() {
+            const token = getStoredToken();
+            if (token) {
+                if (confirm('是否退出当前登录账号？')) {
+                    logout();
+                }
+            } else {
+                openLoginModal();
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_real_name');
+            localStorage.removeItem('admin_name');
+            localStorage.removeItem('admin_username');
+            localStorage.removeItem('admin_work_no');
+            localStorage.removeItem('admin_scope');
+            localStorage.removeItem('admin_shop_name');
+            localStorage.removeItem('admin_shops');
+            localStorage.removeItem('admin_shop_id');
+            localStorage.removeItem('admin_shop_code');
+            currentShopId = '';
+            currentShopCode = '';
+            updateUserBarUI();
+            showToast('已退出登录');
+            fetchInvoiceList();
+            openLoginModal('已退出登录，请重新登录');
+        }
+
+        function openLoginModal(errorHint) {
+            const errAlert = document.getElementById('loginErrorAlert');
+            if (errorHint) {
+                errAlert.textContent = errorHint;
+                errAlert.style.display = 'block';
+            } else {
+                errAlert.style.display = 'none';
+            }
+            document.getElementById('loginModal').classList.add('open');
+            setTimeout(() => {
+                const input = document.getElementById('loginAccount');
+                if (input && currentAuthTab === 'pwd') input.focus();
+            }, 100);
+        }
+
+        function switchAuthTab(tab) {
+            currentAuthTab = tab;
+            const tabPwd = document.getElementById('authTabPwd');
+            const tabToken = document.getElementById('authTabToken');
+            const formPwd = document.getElementById('authPwdForm');
+            const formToken = document.getElementById('authTokenForm');
+            const btnSubmit = document.getElementById('btnLoginSubmit');
+            const errAlert = document.getElementById('loginErrorAlert');
+            errAlert.style.display = 'none';
+
+            if (tab === 'pwd') {
+                tabPwd.classList.add('active');
+                tabToken.classList.remove('active');
+                formPwd.style.display = 'block';
+                formToken.style.display = 'none';
+                btnSubmit.textContent = '立即登录';
+                setTimeout(() => document.getElementById('loginAccount').focus(), 50);
+            } else {
+                tabPwd.classList.remove('active');
+                tabToken.classList.add('active');
+                formPwd.style.display = 'none';
+                formToken.style.display = 'block';
+                btnSubmit.textContent = '保存并应用凭据';
+                setTimeout(() => document.getElementById('inputManualToken').focus(), 50);
+            }
+        }
+
+        async function submitAuth() {
+            const errAlert = document.getElementById('loginErrorAlert');
+            errAlert.style.display = 'none';
+            errAlert.textContent = '';
+
+            if (currentAuthTab === 'token') {
+                const rawToken = document.getElementById('inputManualToken').value.trim();
+                if (!rawToken) {
+                    errAlert.textContent = '请先粘贴有效的 JWT Token 凭据';
+                    errAlert.style.display = 'block';
+                    return;
+                }
+                const cleanToken = rawToken.replace(/^Bearer\s+/i, '').trim();
+                localStorage.setItem('admin_token', cleanToken);
+                localStorage.setItem('token', cleanToken);
+                closeModal('loginModal');
+                showToast('已保存手动凭据，正在验证加载...');
+                updateUserBarUI();
+                await fetchInvoiceList();
+                return;
+            }
+
+            // 账号密码登录
+            const account = document.getElementById('loginAccount').value.trim();
+            const password = document.getElementById('loginPassword').value.trim();
+            if (!account) {
+                errAlert.textContent = '请输入用户名或工号';
+                errAlert.style.display = 'block';
+                document.getElementById('loginAccount').focus();
+                return;
+            }
+            if (!password) {
+                errAlert.textContent = '请输入登录密码';
+                errAlert.style.display = 'block';
+                document.getElementById('loginPassword').focus();
+                return;
+            }
+
+            const btnSubmit = document.getElementById('btnLoginSubmit');
+            const originalText = btnSubmit.textContent;
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = '登录中...';
+
+            try {
+                const res = await fetch('/adminLogin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        workNo: account,
+                        userName: account,
+                        password: password
+                    })
+                });
+                const json = await res.json();
+                if ((json.code === 0 || json.code === 200) && json.token) {
+                    localStorage.setItem('admin_token', json.token);
+                    localStorage.setItem('token', json.token);
+                    if (json.userName) localStorage.setItem('admin_username', json.userName);
+                    if (json.workNo) localStorage.setItem('admin_work_no', json.workNo);
+                    if (json.realName) localStorage.setItem('admin_real_name', json.realName);
+                    if (json.name) localStorage.setItem('admin_name', json.name);
+                    if (json.scope) localStorage.setItem('admin_scope', json.scope);
+                    if (json.shops) {
+                        localStorage.setItem('admin_shops', JSON.stringify(json.shops));
+                        if (json.scope !== 'HQ' && json.shops.length > 0) {
+                            currentShopId = String(json.shops[0].id);
+                            currentShopCode = json.shops[0].code || '';
+                            localStorage.setItem('admin_shop_id', currentShopId);
+                            if (currentShopCode) localStorage.setItem('admin_shop_code', currentShopCode);
+                        }
+                    }
+                    closeModal('loginModal');
+                    updateUserBarUI();
+                    showToast('登录成功！欢迎使用人工开票工作台');
+                    fetchInvoiceList();
+                } else {
+                    errAlert.textContent = json.msg || '登录失败，请检查账号密码';
+                    errAlert.style.display = 'block';
+                }
+            } catch (e) {
+                errAlert.textContent = '网络连接异常，未能连接到服务端';
+                errAlert.style.display = 'block';
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = originalText;
+            }
+        }
+
+        function copyText(val, label) {
+            if (!val || val === '-') {
+                showToast('无可用' + (label || '数据') + '复制');
+                return;
+            }
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(val).then(() => {
+                    showToast('已复制 ' + (label || '') + '：' + val);
+                }).catch(() => fallbackCopy(val, label));
+            } else {
+                fallbackCopy(val, label);
+            }
+        }
+
+        function fallbackCopy(val, label) {
+            const ta = document.createElement('textarea');
+            ta.value = val;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast('已复制 ' + (label || '') + '：' + val);
+        }
+
+        async function fetchInvoiceList() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 40px; color: #8c8c8c;">加载中...</td></tr>';
+
+            const keyword = document.getElementById('searchKeyword').value.trim();
+            let url = `/admin/order/invoice/list?page=1&limit=50`;
+            if (currentShopId) {
+                url += `&shopId=${encodeURIComponent(currentShopId)}&shop_id=${encodeURIComponent(currentShopId)}`;
+            }
+            if (currentStatusFilter) {
+                url += `&status=${encodeURIComponent(currentStatusFilter)}`;
+            }
+            if (keyword) {
+                url += `&keyword=${encodeURIComponent(keyword)}`;
+            }
+
+            try {
+                const res = await fetch(url, { headers: getAuthHeaders() });
+                const json = await res.json();
+                if (json.code === 200 && json.data) {
+                    invoiceList = json.data.list || [];
+                    if (json.data.metrics) {
+                        renderMetrics(json.data.metrics);
+                    }
+                    renderTable(invoiceList);
+                } else if (res.status === 401 || json.code === 401 || (json.msg && json.msg.includes('未登录'))) {
+                    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 48px 20px;">
+                        <div style="font-size: 16px; font-weight: 600; color: #cf1322; margin-bottom: 8px;">🔒 尚未登录或会话已过期</div>
+                        <div style="color: #8c8c8c; font-size: 13px; margin-bottom: 16px;">发票数据仅限授权财务与管理员查阅，请点击下方登录</div>
+                        <button type="button" class="btn btn-primary" onclick="openLoginModal('请先输入管理员账号密码登录工作台')">🔑 立即登录</button>
+                    </td></tr>`;
+                    updateUserBarUI();
+                    openLoginModal('未登录或登录凭据已失效，请先登录管理员账号');
+                } else if (res.status === 403 || json.code === 403 || (json.msg && json.msg.includes('权限'))) {
+                    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 48px 20px;">
+                        <div style="font-size: 16px; font-weight: 600; color: #fa8c16; margin-bottom: 8px;">⚠️ 权限受限</div>
+                        <div style="color: #8c8c8c; font-size: 13px; margin-bottom: 16px;">${json.msg || '当前账号无权访问发票接口，请联系超管分配 order:view 或 order:invoice:view 权限'}</div>
+                        <button type="button" class="btn btn-default" onclick="handleUserAuthBtnClick()">切换其他账号</button>
+                    </td></tr>`;
+                } else if (json.code === 4001 || (json.msg && json.msg.includes('门店'))) {
+                    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 48px 20px;">
+                        <div style="font-size: 16px; font-weight: 600; color: #fa8c16; margin-bottom: 8px;">🏢 请选择指定门店</div>
+                        <div style="color: #8c8c8c; font-size: 13px; margin-bottom: 16px;">${json.msg || '请在顶部切换所属门店'}</div>
+                    </td></tr>`;
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 40px; color: #f5222d;">查询失败: ${json.msg || '未知错误'}</td></tr>`;
+                }
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 40px; color: #f5222d;">网络连接异常，未能拉取列表</td></tr>`;
+            }
+        }
+
+        function renderMetrics(m) {
+            document.getElementById('countWaiting').innerHTML = (m.countWaiting || 0) + ' <span class="metric-unit">笔</span>';
+            document.getElementById('countSuccess').innerHTML = (m.countSuccess || 0) + ' <span class="metric-unit">笔</span>';
+            document.getElementById('countPendingScan').innerHTML = (m.countPendingScan || 0) + ' <span class="metric-unit">笔</span>';
+            document.getElementById('countRejected').innerHTML = (m.countRejected || 0) + ' <span class="metric-unit">笔</span>';
+            document.getElementById('badgeWaiting').textContent = m.countWaiting || 0;
+        }
+
+        function renderTable(list) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (!list || list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding: 40px; color: #8c8c8c;">暂无符合条件的开票申请记录</td></tr>';
+                return;
+            }
+
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+
+                const taxCell = item.buyer_tax_no && item.buyer_tax_no !== '-'
+                    ? `<div class="tax-no-box">
+                         <span>${item.buyer_tax_no}</span>
+                         <button type="button" class="btn-copy" onclick="copyText('${item.buyer_tax_no}', '税号')">复制</button>
+                       </div>`
+                    : '<span style="color: #bfbfbf;">无(个人抬头)</span>';
+
+                let statusName = '待处理';
+                let statusClass = 'waiting';
+                if (item.invoice_status === 'TITLE_SUBMITTED') {
+                    statusName = '待开票';
+                    statusClass = 'waiting';
+                } else if (item.invoice_status === 'SUCCESS') {
+                    statusName = '已开具';
+                    statusClass = 'done';
+                } else if (item.invoice_status === 'REJECTED') {
+                    statusName = '已驳回';
+                    statusClass = 'rejected';
+                } else if (item.invoice_status === 'PENDING_SCAN') {
+                    statusName = '待顾客填抬头';
+                    statusClass = 'pending';
+                }
+
+                let cardTag = '';
+                if (item.invoice_status === 'SUCCESS') {
+                    if (item.card_insert_status === 'SUCCESS') {
+                        cardTag = '<span class="status-tag done" title="已成功推送到用户微信卡包">🟢 已入卡包</span>';
+                    } else if (item.card_insert_status === 'PENDING') {
+                        cardTag = '<span class="status-tag pending" title="正在推送到用户微信卡包">🟡 插卡中</span>';
+                    } else if (item.card_insert_status === 'FAILED') {
+                        const hint = (item.card_insert_msg || '插卡未成功').replace(/"/g, '&quot;');
+                        cardTag = `<span class="status-tag rejected" title="${hint}" onclick="alert('【卡包推送说明】\\n${hint}')" style="cursor: pointer;">🔴 插卡失败</span>`;
+                    } else {
+                        cardTag = '<span class="status-tag" style="background: #f5f5f5; color: #8c8c8c;">⚪ 待推卡包</span>';
+                    }
+                } else {
+                    cardTag = '<span style="color: #bfbfbf; font-size: 12px;">--</span>';
+                }
+
+                let actionHtml = '';
+                if (item.invoice_status === 'TITLE_SUBMITTED') {
+                    actionHtml = `
+                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                            <button type="button" class="btn btn-default btn-xs" style="color: #096dd9; border-color: #91d5ff;" onclick="openTaxBureauDirect('${escapeAttr(item.shop_address)}', '${escapeAttr(item.tax_bureau_url)}', '${escapeAttr(item.tax_bureau_name)}', '${escapeAttr(item.shop_name)}')" title="点击直达该门店对应的电子税局开票">🏛️ 税局开票</button>
+                            <button type="button" class="btn btn-primary btn-xs" onclick="openIssueModal('${item.order_no}')">开具发票</button>
+                            <button type="button" class="btn btn-default btn-xs" style="color: var(--danger); border-color: #ffa39e;" onclick="openRejectModal('${item.order_no}')">驳回</button>
+                        </div>
+                    `;
+                } else if (item.invoice_status === 'SUCCESS') {
+                    let pushCardBtn = '';
+                    if (item.card_insert_status !== 'SUCCESS') {
+                        pushCardBtn = `<button type="button" class="btn btn-default btn-xs" style="color: #1890ff; border-color: #91d5ff;" onclick="submitInsertCard('${item.order_no}')">推入卡包</button>`;
+                    }
+                    actionHtml = `
+                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                            ${pushCardBtn}
+                            <button type="button" class="btn btn-default btn-xs" onclick="showInvoiceDetail('${item.order_no}')">发票凭证</button>
+                        </div>
+                    `;
+                } else if (item.invoice_status === 'REJECTED') {
+                    actionHtml = `
+                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                            <button type="button" class="btn btn-default btn-xs" onclick="alert('【驳回原因说明】\\n${item.error_msg || '未填写'}')">查看原因</button>
+                        </div>
+                    `;
+                } else {
+                    actionHtml = '<span style="color: #bfbfbf; font-size: 12px;">等待顾客提交</span>';
+                }
+
+                const createTimeStr = item.created_at ? item.created_at.replace('T', ' ').substring(0, 19) : '--';
+                const shopLabel = item.shop_name || ('门店 #' + (item.shop_id || '--'));
+                const shopCodeBadge = item.shop_code ? `<span style="font-size: 11px; color: #8c8c8c; margin-left: 2px;">(${item.shop_code})</span>` : '';
+                const rowTaxInfo = resolveTaxBureau(item.shop_address, item.tax_bureau_url, item.tax_bureau_name);
+                const shortTaxName = rowTaxInfo.name.replace('国家税务总局', '').replace('电子税务局', '税局');
+
+                tr.innerHTML = `
+                    <td>
+                        <div style="font-weight: 600; color: #1f1f1f;">${item.order_no}</div>
+                        <div style="font-size: 11px; color: #8c8c8c;">单号: ${item.fapiao_apply_id || '--'}</div>
+                    </td>
+                    <td>
+                        <div style="font-weight: 600; color: #1f1f1f; display: flex; align-items: center; gap: 4px;">
+                            <span>🏢</span>
+                            <span>${shopLabel}</span>
+                        </div>
+                        <div style="font-size: 11px; color: #fa8c16; margin-top: 2px;">
+                            <span>独立纳税主体${shopCodeBadge}</span>
+                        </div>
+                        <div style="margin-top: 3px;">
+                            <a href="javascript:void(0)" onclick="openTaxBureauDirect('${escapeAttr(item.shop_address)}', '${escapeAttr(item.tax_bureau_url)}', '${escapeAttr(item.tax_bureau_name)}', '${escapeAttr(item.shop_name)}')" style="font-size: 11px; color: #096dd9; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;" title="门店地址：${escapeAttr(item.shop_address || '未填写')}&#10;点击直达：${escapeAttr(rowTaxInfo.name)}">
+                                🏛️ ${shortTaxName} ↗
+                            </a>
+                        </div>
+                    </td>
+                    <td>${createTimeStr}</td>
+                    <td style="font-weight: 700; color: #fa5151;">¥ ${(item.invoice_amount || 0).toFixed(2)}</td>
+                    <td><span style="font-size: 12px; background: #f5f5f5; padding: 2px 6px; border-radius: 4px;">${item.buyer_tax_no ? '企业' : '个人'}</span></td>
+                    <td>
+                        <div style="font-weight: 500;">${item.buyer_title || '--'}</div>
+                    </td>
+                    <td>${taxCell}</td>
+                    <td>
+                        <div>${item.buyer_email || '-'}</div>
+                        <div style="font-size: 11px; color: #8c8c8c;">${item.buyer_phone || '-'}</div>
+                    </td>
+                    <td><span class="status-tag ${statusClass}">${statusName}</span></td>
+                    <td>${cardTag}</td>
+                    <td style="text-align: right;">${actionHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function switchTab(status, btn) {
+            currentStatusFilter = (status === 'ALL') ? '' : status;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            fetchInvoiceList();
+        }
+
+        function onSearchKeyup(e) {
+            if (e.key === 'Enter') {
+                fetchInvoiceList();
+            }
+        }
+
+
+        function handleOpenCurrentShopTaxBureau() {
+            const token = getStoredToken();
+            if (!token) {
+                showToast('请先登录工作台');
+                openLoginModal();
+                return;
+            }
+            let shops = [];
+            try {
+                shops = JSON.parse(localStorage.getItem('admin_shops') || '[]');
+            } catch (e) {
+                shops = [];
+            }
+
+            if (currentShopId) {
+                const s = shops.find(x => String(x.id) === String(currentShopId));
+                if (s) {
+                    const taxInfo = resolveTaxBureau(s.address, s.taxBureauUrl, s.taxBureauName);
+                    window.open(taxInfo.url, '_blank');
+                    showToast(`已在新标签页打开【${taxInfo.name}】(${s.name || s.shopName})`);
+                    return;
+                }
+            }
+
+            // 全部门店或未匹配单店时，打开门店税局导航清单弹窗
+            openTaxBureauPickerModal(shops);
+        }
+
+        function openTaxBureauPickerModal(shops) {
+            const listEl = document.getElementById('taxBureauShopList');
+            if (!listEl) return;
+            listEl.innerHTML = '';
+
+            if (!shops || shops.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; color: #8c8c8c; padding: 20px;">暂无可管理的门店数据，请直接访问国家电子税务局总平台。</div>';
+            } else {
+                shops.forEach(s => {
+                    const taxInfo = resolveTaxBureau(s.address, s.taxBureauUrl, s.taxBureauName);
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: #fafafa; border: 1px solid #e8e8e8; border-radius: 6px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px;';
+                    card.innerHTML = `
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; color: #262626; font-size: 13px;">🏢 ${s.name || s.shopName || ('门店 #' + s.id)} ${s.code ? ('(' + s.code + ')') : ''}</div>
+                            <div style="font-size: 11px; color: #8c8c8c; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📍 地址：${s.address || '未登记地址'}</div>
+                            <div style="font-size: 11px; color: #096dd9; margin-top: 2px;">🏛️ 对应税局：<strong>${taxInfo.name}</strong></div>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary btn-xs" onclick="window.open('${taxInfo.url}', '_blank'); showToast('已打开【${taxInfo.name}】');" style="white-space: nowrap; background: #096dd9;">
+                                直达开票 ↗
+                            </button>
+                        </div>
+                    `;
+                    listEl.appendChild(card);
+                });
+            }
+
+            document.getElementById('taxBureauPickerModal').classList.add('open');
+        }
+
+        function openTaxBureauDirect(address, url, name, shopName) {
+            const taxInfo = resolveTaxBureau(address, url, name);
+            window.open(taxInfo.url, '_blank');
+            showToast(`已在新标签页打开【${taxInfo.name}】${shopName ? ('(' + shopName + ')') : ''}`);
+        }
+
+        function copyIssueBuyerInfo() {
+            if (!currentTargetOrderNo) return;
+            const item = invoiceList.find(x => x.order_no === currentTargetOrderNo);
+            if (!item) return;
+
+            const lines = [];
+            lines.push(`【发票抬头】${item.buyer_title || ''}`);
+            if (item.buyer_tax_no) {
+                lines.push(`【企业税号/统一代码】${item.buyer_tax_no}`);
+            }
+            if (item.buyer_address || item.buyer_phone) {
+                lines.push(`【地址电话】${item.buyer_address || ''} ${item.buyer_phone || ''}`.trim());
+            }
+            if (item.buyer_bank_name || item.buyer_bank_account) {
+                lines.push(`【开户银行及账号】${item.buyer_bank_name || ''} ${item.buyer_bank_account || ''}`.trim());
+            }
+            lines.push(`【开票金额】¥${(item.invoice_amount || 0).toFixed(2)}`);
+            if (item.buyer_email) {
+                lines.push(`【接收邮箱】${item.buyer_email}`);
+            }
+            const copyContent = lines.join('\n');
+            copyText(copyContent, '完整开票资料');
+        }
+
+        function openIssueTaxBureauDirect() {
+            window.open(currentIssueTaxBureauUrl || 'https://etax.chinatax.gov.cn/', '_blank');
+            showToast(`已打开【${currentIssueTaxBureauName}】`);
+        }
+
+        function openIssueModal(orderNo) {
+            const item = invoiceList.find(x => x.order_no === orderNo);
+            if (!item) return;
+            currentTargetOrderNo = orderNo;
+
+            const shopDisplay = item.shop_name ? `${item.shop_name} (门店#${item.shop_id || '--'})` : `门店 #${item.shop_id || '--'}`;
+            document.getElementById('issueShopName').textContent = shopDisplay;
+            document.getElementById('issueShopDetail').textContent = shopDisplay + (item.shop_code ? ' · ' + item.shop_code : '');
+            document.getElementById('issueOrderNo').textContent = item.order_no;
+            document.getElementById('issueAmount').textContent = '¥ ' + (item.invoice_amount || 0).toFixed(2);
+            document.getElementById('issueTitle').textContent = item.buyer_title || '--';
+            document.getElementById('issueTaxNo').textContent = item.buyer_tax_no || '--';
+
+            document.getElementById('issueShopAddress').textContent = item.shop_address || '未登记详细地址（可使用国家统一平台）';
+            const taxInfo = resolveTaxBureau(item.shop_address, item.tax_bureau_url, item.tax_bureau_name);
+            document.getElementById('issueTaxBureauName').textContent = taxInfo.name;
+            const taxLink = document.getElementById('issueTaxBureauLink');
+            if (taxLink) {
+                taxLink.href = taxInfo.url;
+                taxLink.title = `点击直达：${taxInfo.name}`;
+            }
+            currentIssueTaxBureauUrl = taxInfo.url;
+            currentIssueTaxBureauName = taxInfo.name;
+
+            document.getElementById('inputFapiaoNumber').value = '';
+            document.getElementById('inputFapiaoCode').value = '';
+            document.getElementById('inputFapiaoFileUrl').value = '';
+
+            document.getElementById('issueModal').classList.add('open');
+        }
+
+        function openRejectModal(orderNo) {
+            const item = invoiceList.find(x => x.order_no === orderNo);
+            if (!item) return;
+            currentTargetOrderNo = orderNo;
+
+            const shopDisplay = item.shop_name ? `${item.shop_name} (门店#${item.shop_id || '--'})` : `门店 #${item.shop_id || '--'}`;
+            document.getElementById('rejectShopDetail').textContent = shopDisplay;
+            document.getElementById('rejectOrderNo').textContent = item.order_no;
+            document.getElementById('rejectTitle').textContent = item.buyer_title || '--';
+            document.getElementById('rejectQuickReason').value = '';
+            document.getElementById('rejectDetailMsg').value = '';
+
+            document.getElementById('rejectModal').classList.add('open');
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('open');
+            if (id === 'issueModal' || id === 'rejectModal') {
+                currentTargetOrderNo = null;
+            }
+        }
+
+        function onSelectRejectReason(val) {
+            const area = document.getElementById('rejectDetailMsg');
+            if (val && val !== 'CUSTOM') {
+                area.value = val;
+            } else if (val === 'CUSTOM') {
+                area.value = '';
+                area.focus();
+            }
+        }
+
+        async function submitIssue() {
+            const fapiaoNumber = document.getElementById('inputFapiaoNumber').value.trim();
+            if (!fapiaoNumber) {
+                alert('请输入税务发票号码');
+                return;
+            }
+            const fapiaoCode = document.getElementById('inputFapiaoCode').value.trim();
+            const fapiaoFileUrl = document.getElementById('inputFapiaoFileUrl').value.trim();
+
+            try {
+                const res = await fetch('/admin/order/invoice/issue', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        orderNo: currentTargetOrderNo,
+                        fapiaoNumber: fapiaoNumber,
+                        fapiaoCode: fapiaoCode,
+                        fapiaoFileUrl: fapiaoFileUrl
+                    })
+                });
+                const json = await res.json();
+                if (json.code === 200 || json.code === 0) {
+                    closeModal('issueModal');
+                    showToast('订单 ' + currentTargetOrderNo + ' 开票成功！');
+                    fetchInvoiceList();
+                } else if (res.status === 401 || json.code === 401) {
+                    openLoginModal('登录已失效，请重新登录后操作');
+                } else {
+                    alert('开票失败: ' + (json.msg || '未知错误'));
+                }
+            } catch (e) {
+                alert('提交异常，请检查网络');
+            }
+        }
+
+        async function submitReject() {
+            const rejectReason = document.getElementById('rejectDetailMsg').value.trim();
+            if (!rejectReason) {
+                alert('请填写驳回原因说明');
+                return;
+            }
+
+            try {
+                const res = await fetch('/admin/order/invoice/reject', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({
+                        orderNo: currentTargetOrderNo,
+                        rejectReason: rejectReason
+                    })
+                });
+                const json = await res.json();
+                if (json.code === 200 || json.code === 0) {
+                    closeModal('rejectModal');
+                    showToast('已成功驳回订单 ' + currentTargetOrderNo + ' 的开票申请');
+                    fetchInvoiceList();
+                } else if (res.status === 401 || json.code === 401) {
+                    openLoginModal('登录已失效，请重新登录后操作');
+                } else {
+                    alert('驳回失败: ' + (json.msg || '未知错误'));
+                }
+            } catch (e) {
+                alert('提交异常，请检查网络');
+            }
+        }
+
+        async function submitInsertCard(orderNo) {
+            if (!confirm('是否立即调用微信支付 API 将订单 ' + orderNo + ' 的发票推送到用户微信卡包？')) {
+                return;
+            }
+            showToast('正在请求微信支付插卡接口...');
+            try {
+                const res = await fetch('/admin/order/invoice/insert-card', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ orderNo: orderNo })
+                });
+                const json = await res.json();
+                if (json.code === 200 || json.code === 0) {
+                    showToast('微信卡包同步反馈: ' + (json.cardMsg || json.msg || '操作成功'));
+                    fetchInvoiceList();
+                } else if (res.status === 401 || json.code === 401) {
+                    openLoginModal('登录已失效，请重新登录后操作');
+                } else {
+                    alert('推送到卡包失败: ' + (json.cardMsg || json.msg || '未知错误'));
+                    fetchInvoiceList();
+                }
+            } catch (e) {
+                alert('网络请求异常，请检查网络');
+            }
+        }
+
+        function showInvoiceDetail(orderNo) {
+            const item = invoiceList.find(x => x.order_no === orderNo);
+            if (item) {
+                const shopDisplay = item.shop_name ? `${item.shop_name} (门店#${item.shop_id || '--'})` : `门店 #${item.shop_id || '--'}`;
+                alert(`【发票凭证详情】\n订单号：${item.order_no}\n开票门店：${shopDisplay}（独立纳税主体）\n发票号码：${item.fapiao_number}\n发票代码：${item.fapiao_code || '无'}\n卡包状态：${item.card_insert_status === 'SUCCESS' ? '已成功存入微信卡包' : (item.card_insert_status === 'FAILED' ? ('推送失败: ' + (item.card_insert_msg || '未开通权限')) : '尚未推入卡包')}\n下载链接：${item.fapiao_file_url || '线下税控机开具(无在线链接)'}`);
+            }
+        }
+
+        function exportData() {
+            if (!invoiceList || invoiceList.length === 0) {
+                showToast('暂无数据可导出');
+                return;
+            }
+            let csv = '订单号,申请单号,开票门店(纳税主体),门店ID,开票金额,抬头类型,发票抬头,税号,手机号,邮箱,状态,卡包状态,卡包同步说明,发票号码\n';
+            invoiceList.forEach(i => {
+                csv += `"${i.order_no}","${i.fapiao_apply_id || ''}","${(i.shop_name || '').replace(/"/g, '""')}","${i.shop_id || ''}","${i.invoice_amount || 0}","${i.buyer_tax_no ? '企业' : '个人'}","${(i.buyer_title || '').replace(/"/g, '""')}","${i.buyer_tax_no || ''}","${i.buyer_phone || ''}","${i.buyer_email || ''}","${i.invoice_status}","${i.card_insert_status || 'NOT_ATTEMPTED'}","${(i.card_insert_msg || '').replace(/"/g, '""')}","${i.fapiao_number || ''}"\n`;
+            });
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `发票申请清单_${new Date().toISOString().substring(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('已导出开票数据清单');
+        }
+
+        // 初始化鉴权与数据拉取
+        initAuthFromUrlAndStorage();
+        updateUserBarUI();
+        fetchInvoiceList();
+    </script>
+</body>
+</html>

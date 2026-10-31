@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lanf.mapper.DishShopMapper">
+
+    <insert id="insertIgnoreLink">
+        INSERT IGNORE INTO t_dish_shop (shop_id, dish_id, stock, sold_out, onsale_override)
+        VALUES (#{shopId}, #{dishId}, -1, 0, 1)
+    </insert>
+</mapper>

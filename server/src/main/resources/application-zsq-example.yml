@@ -1,0 +1,7 @@
+# 合并到你项目的 application.yml 或作为 profile: zsq
+zsq:
+  api-base: https://zsq.wlhulian.com/api
+  username: 你的手机号
+  password: 你的密码
+  role: merchant          # merchant | partner
+  login-mode: password    # password | sms

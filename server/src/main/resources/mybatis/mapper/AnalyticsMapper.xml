@@ -1,0 +1,598 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lanf.mapper.AnalyticsMapper">
+
+    <sql id="orderSuccessFilter">
+        o.merchantId = '1'
+        AND o.transac_status = 'success'
+        AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+    </sql>
+
+    <sql id="orderTimeRange">
+        AND o.order_time &gt;= #{startTime}
+        AND o.order_time &lt; #{endTime}
+    </sql>
+
+    <sql id="shopFilter">
+        <if test="shopId != null">
+            AND o.shop_id = #{shopId}
+        </if>
+    </sql>
+
+    <!-- 单笔订单净营业额：sett - discount + service - refund - pay_amount_gift -->
+    <sql id="orderNetExprO">(COALESCE(o.sett_amount, 0) - COALESCE(o.discount_amount, 0) + COALESCE(o.service_fee, 0) - COALESCE(o.refund_amount, 0) - COALESCE(o.pay_amount_gift, 0))</sql>
+    <sql id="orderNetExprO2">(COALESCE(o2.sett_amount, 0) - COALESCE(o2.discount_amount, 0) + COALESCE(o2.service_fee, 0) - COALESCE(o2.refund_amount, 0) - COALESCE(o2.pay_amount_gift, 0))</sql>
+
+    <!-- 营业日标签：24小时周期以 settle_time 为界，
+         order_time >= settle_time 归属当天；order_time < settle_time 归属前一天。 -->
+    <sql id="businessDateOfOrder">
+        (CASE
+            WHEN TIME(o.order_time) &gt;= #{settleTime} THEN DATE(o.order_time)
+            ELSE DATE_SUB(DATE(o.order_time), INTERVAL 1 DAY)
+        END)
+    </sql>
+
+    <!-- 营业日过滤：24小时周期全覆盖 -->
+    <sql id="businessDayFilter">
+        AND (TIME(o.order_time) &gt;= #{settleTime} OR TIME(o.order_time) &lt; #{settleTime})
+    </sql>
+
+    <select id="selectBusinessCore" resultType="map">
+        SELECT
+            COUNT(*) AS order_count,
+            COALESCE(SUM(<include refid="orderNetExprO"/>), 0) AS net_revenue,
+            COALESCE(SUM(COALESCE(o.sett_amount, 0) + COALESCE(o.service_fee, 0)), 0) AS gross_before_discount,
+            COALESCE(SUM(COALESCE(o.discount_amount, 0)), 0) AS discount_total,
+            COALESCE(SUM(COALESCE(o.refund_amount, 0)), 0) AS refund_total,
+            COALESCE(SUM(COALESCE(o.number_of_diners, 0)), 0) AS diner_sum_all,
+            COALESCE(SUM(CASE WHEN o.dineInOrTakeOut = '堂食' THEN COALESCE(o.number_of_diners, 0) ELSE 0 END), 0) AS diner_sum_dine_in,
+            COALESCE(SUM(CASE WHEN o.dineInOrTakeOut = '堂食' THEN 1 ELSE 0 END), 0) AS dine_in_order_count
+        FROM t_order o
+        WHERE
+        <include refid="orderSuccessFilter"/>
+        <include refid="orderTimeRange"/>
+        <include refid="shopFilter"/>
+    </select>
+
+    <select id="selectTableCount" resultType="long">
+        SELECT COUNT(*) FROM t_table t
+        <where>
+            <if test="shopId != null">
+                t.shop_id = #{shopId}
+            </if>
+            <if test="shopId == null">
+                1 = 1
+            </if>
+        </where>
+    </select>
+
+    <select id="selectTimeSlotRevenue" resultType="map">
+        SELECT
+            slot_key AS slot_key,
+            COALESCE(SUM(amt), 0) AS net_revenue,
+            COUNT(*) AS order_count
+        FROM (
+            SELECT
+                CASE
+                    WHEN TIME(o.order_time) &gt;= '05:00:00' AND TIME(o.order_time) &lt; '10:00:00' THEN 'breakfast'
+                    WHEN TIME(o.order_time) &gt;= '10:00:00' AND TIME(o.order_time) &lt; '16:00:00' THEN 'lunch'
+                    WHEN TIME(o.order_time) &gt;= '16:00:00' AND TIME(o.order_time) &lt; '22:00:00' THEN 'dinner'
+                    ELSE 'late_night'
+                END AS slot_key,
+                <include refid="orderNetExprO"/> AS amt
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            <include refid="businessDayFilter"/>
+        ) x
+        GROUP BY slot_key
+    </select>
+
+    <select id="selectTimeSlotRevenueBusinessAnchor" resultType="map">
+        SELECT
+            slot_key AS slot_key,
+            COALESCE(SUM(amt), 0) AS net_revenue,
+            COUNT(*) AS order_count
+        FROM (
+            SELECT
+                CASE
+                    WHEN TIME(o.order_time) &gt;= '16:00:00' AND TIME(o.order_time) &lt; '22:00:00' THEN 'bd_evening'
+                    WHEN TIME(o.order_time) &gt;= '22:00:00' OR TIME(o.order_time) &lt; '04:00:00' THEN 'bd_late_night'
+                    WHEN TIME(o.order_time) &gt;= '04:00:00' AND TIME(o.order_time) &lt; '10:00:00' THEN 'bd_breakfast'
+                    ELSE 'bd_lunch'
+                END AS slot_key,
+                <include refid="orderNetExprO"/> AS amt
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            <include refid="businessDayFilter"/>
+        ) x
+        GROUP BY slot_key
+    </select>
+
+    <!-- 墙钟小时：与 selectTimeSlotRevenue（自然钟点四段）同口径，HOUR(order_time) 0-23 逐时。
+         分桶表达式下沉子查询，外层对列做 LPAD 格式化，避免 ONLY_FULL_GROUP_BY 1055。 -->
+    <select id="selectTimeSlotHourly" resultType="map">
+        SELECT
+            LPAD(hh, 2, '0') AS hour_key,
+            COALESCE(SUM(net_revenue), 0) AS net_revenue,
+            COUNT(*) AS order_count
+        FROM (
+            SELECT
+                HOUR(o.order_time) AS hh,
+                <include refid="orderNetExprO"/> AS net_revenue
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            <include refid="businessDayFilter"/>
+        ) x
+        GROUP BY hh
+        ORDER BY hour_key ASC
+    </select>
+
+    <!-- 营业日小时：以门店 open_time（默认 16:00）为起点，(HOUR + 24 - openHour) % 24 得 0-23；
+         （用 +24 再减避免 UNSIGNED 下溢 1690；0-15 时订单归前一日营业日尾段）
+         键 bd_hour_00...bd_hour_23，0-15 时订单归入前一日营业日尾段（与 businessDateOfOrder 归属一致）。
+         分桶表达式下沉子查询，外层对列做格式化，避免 ONLY_FULL_GROUP_BY 1055。 -->
+    <select id="selectTimeSlotBusinessHourly" resultType="map">
+        SELECT
+            CONCAT('bd_hour_', LPAD(bd_hour, 2, '0')) AS hour_key,
+            COALESCE(SUM(net_revenue), 0) AS net_revenue,
+            COUNT(*) AS order_count
+        FROM (
+            SELECT
+                ((HOUR(o.order_time) + 24 - CAST(SUBSTRING_INDEX(#{openTime}, ':', 1) AS UNSIGNED)) % 24) AS bd_hour,
+                <include refid="orderNetExprO"/> AS net_revenue
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            <include refid="businessDayFilter"/>
+        ) x
+        GROUP BY bd_hour
+        ORDER BY hour_key ASC
+    </select>
+
+    <select id="selectPaymentChannelMix" resultType="map">
+        SELECT
+            ch AS channel_key,
+            COALESCE(SUM(amt), 0) AS net_revenue,
+            COUNT(*) AS order_count
+        FROM (
+            SELECT
+                CASE
+                    WHEN o.payment_method LIKE '%微信%' THEN 'wechat'
+                    WHEN o.payment_method LIKE '%支付宝%' OR LOWER(IFNULL(o.payment_method,'')) LIKE '%alipay%' THEN 'alipay'
+                    WHEN LOWER(IFNULL(o.payment_method,'')) = 'cash' OR o.payment_method LIKE '%现金%' THEN 'cash'
+                    WHEN o.payment_method LIKE '%余额%' OR IFNULL(o.transaction_id,'') LIKE 'BAL_%' THEN 'member_balance'
+                    ELSE 'other'
+                END AS ch,
+                <include refid="orderNetExprO"/> AS amt
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+        ) t
+        GROUP BY ch
+    </select>
+
+    <select id="selectBusinessTrend" resultType="map">
+        SELECT
+            bucket_label AS bucket_label,
+            COALESCE(SUM(net), 0) AS net_revenue,
+            COUNT(*) AS order_count
+        FROM (
+            SELECT
+                o.id,
+                <include refid="orderNetExprO"/> AS net,
+                <choose>
+                    <when test="granularity == 'week'">
+                        CONCAT(DATE_FORMAT(o.order_time, '%x'), '-W', DATE_FORMAT(o.order_time, '%v')) AS bucket_label
+                    </when>
+                    <when test="granularity == 'month'">
+                        DATE_FORMAT(o.order_time, '%Y-%m-01') AS bucket_label
+                    </when>
+                    <when test="granularity == 'year'">
+                        CAST(YEAR(o.order_time) AS CHAR) AS bucket_label
+                    </when>
+                    <otherwise>
+                        DATE_FORMAT(o.order_time, '%Y-%m-%d') AS bucket_label
+                    </otherwise>
+                </choose>
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+        ) z
+        GROUP BY bucket_label
+        ORDER BY bucket_label ASC
+    </select>
+
+    <select id="selectBusinessTrendByBusinessDate" resultType="map">
+        SELECT
+            bucket_label AS bucket_label,
+            COALESCE(SUM(net), 0) AS net_revenue,
+            COUNT(*) AS order_count
+        FROM (
+            SELECT
+                y.id,
+                y.net,
+                <choose>
+                    <when test="granularity == 'week'">
+                        CONCAT(YEAR(y.bd), '-W', LPAD(WEEK(y.bd, 3), 2, '0')) AS bucket_label
+                    </when>
+                    <when test="granularity == 'month'">
+                        DATE_FORMAT(y.bd, '%Y-%m-01') AS bucket_label
+                    </when>
+                    <when test="granularity == 'year'">
+                        CAST(YEAR(y.bd) AS CHAR) AS bucket_label
+                    </when>
+                    <otherwise>
+                        DATE_FORMAT(y.bd, '%Y-%m-%d') AS bucket_label
+                    </otherwise>
+                </choose>
+            FROM (
+                SELECT
+                    o.id,
+                    <include refid="orderNetExprO"/> AS net,
+                    <include refid="businessDateOfOrder"/> AS bd
+                FROM t_order o
+                WHERE
+                <include refid="orderSuccessFilter"/>
+                <include refid="orderTimeRange"/>
+                <include refid="shopFilter"/>
+                <include refid="businessDayFilter"/>
+            ) y
+        ) z
+        GROUP BY bucket_label
+        ORDER BY bucket_label ASC
+    </select>
+
+    <select id="selectDistinctBusinessDayCount" resultType="long">
+        SELECT COUNT(DISTINCT x.bd)
+        FROM (
+            SELECT <include refid="businessDateOfOrder"/> AS bd
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            <include refid="businessDayFilter"/>
+        ) x
+    </select>
+
+    <select id="selectDishSalesAgg" resultType="map">
+        SELECT
+            TRIM(od.name) AS dish_name,
+            COALESCE(SUM(CAST(od.quantity AS DECIMAL(12, 2))), 0) AS total_quantity,
+            COALESCE(SUM(od.total_price), 0) AS total_sales,
+            CAST(NULL AS DECIMAL(10, 2)) AS ref_cost_price,
+            MAX(d.time) AS dish_listed_time,
+            MAX(CASE WHEN od.name LIKE '%套餐%' OR IFNULL(od.remark,'') LIKE '%套餐%' THEN 1 ELSE 0 END) AS combo_flag
+        FROM t_order_detail od
+        INNER JOIN t_order o ON od.mId = o.id
+        LEFT JOIN t_dish d ON d.id = (
+            SELECT MIN(d2.id) FROM t_dish d2 WHERE TRIM(d2.name) = TRIM(od.name)
+        )
+        WHERE
+            o.order_time &gt;= #{startTime}
+            AND o.order_time &lt; #{endTime}
+            AND ( (od.total_price IS NOT NULL AND od.total_price &gt; 0) OR IFNULL(od.line_type,'') = 'combo_component' )
+            AND od.name IS NOT NULL AND TRIM(od.name) != ''
+            AND o.transac_status = 'success'
+            AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+            <if test="shopId != null">
+                AND o.shop_id = #{shopId}
+            </if>
+        GROUP BY TRIM(od.name)
+        ORDER BY total_sales DESC
+    </select>
+
+    <select id="selectDishComboRatio" resultType="map">
+        SELECT
+            COALESCE(SUM(CASE WHEN od.name LIKE '%套餐%' OR IFNULL(od.remark,'') LIKE '%套餐%' THEN od.total_price ELSE 0 END), 0) AS combo_sales,
+            COALESCE(SUM(od.total_price), 0) AS total_sales,
+            COALESCE(SUM(CASE WHEN od.name LIKE '%套餐%' OR IFNULL(od.remark,'') LIKE '%套餐%' THEN CAST(od.quantity AS DECIMAL(12,2)) ELSE 0 END), 0) AS combo_qty,
+            COALESCE(SUM(CAST(od.quantity AS DECIMAL(12,2))), 0) AS total_qty
+        FROM t_order_detail od
+        INNER JOIN t_order o ON od.mId = o.id
+        WHERE
+            o.order_time &gt;= #{startTime}
+            AND o.order_time &lt; #{endTime}
+            AND ( (od.total_price IS NOT NULL AND od.total_price &gt; 0) OR IFNULL(od.line_type,'') = 'combo_component' )
+            AND o.transac_status = 'success'
+            AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+            <if test="shopId != null">
+                AND o.shop_id = #{shopId}
+            </if>
+    </select>
+
+    <select id="selectNewDishSalesTrend" resultType="map">
+        SELECT
+            DATE_FORMAT(o.order_time, '%Y-%m-%d') AS day_label,
+            COALESCE(SUM(od.total_price), 0) AS sales,
+            COALESCE(SUM(CAST(od.quantity AS DECIMAL(12,2))), 0) AS quantity
+        FROM t_order_detail od
+        INNER JOIN t_order o ON od.mId = o.id
+        INNER JOIN t_dish d ON d.id = (
+            SELECT MIN(d2.id) FROM t_dish d2 WHERE TRIM(d2.name) = TRIM(od.name)
+        )
+        WHERE
+            o.order_time &gt;= #{startTime}
+            AND o.order_time &lt; #{endTime}
+            AND d.time IS NOT NULL
+            AND d.time &gt;= #{startTime}
+            AND d.time &lt;= #{endTime}
+            AND ( (od.total_price IS NOT NULL AND od.total_price &gt; 0) OR IFNULL(od.line_type,'') = 'combo_component' )
+            AND o.transac_status = 'success'
+            AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+            <if test="shopId != null">
+                AND o.shop_id = #{shopId}
+            </if>
+        GROUP BY DATE_FORMAT(o.order_time, '%Y-%m-%d')
+        ORDER BY day_label ASC
+    </select>
+
+    <select id="selectNewDishSalesTrendByBusinessDate" resultType="map">
+        SELECT
+            DATE_FORMAT(t.bd, '%Y-%m-%d') AS day_label,
+            COALESCE(SUM(t.line_sales), 0) AS sales,
+            COALESCE(SUM(t.line_qty), 0) AS quantity
+        FROM (
+            SELECT
+                od.total_price AS line_sales,
+                CAST(od.quantity AS DECIMAL(12,2)) AS line_qty,
+                <include refid="businessDateOfOrder"/> AS bd
+            FROM t_order_detail od
+            INNER JOIN t_order o ON od.mId = o.id
+            INNER JOIN t_dish d ON d.id = (
+                SELECT MIN(d2.id) FROM t_dish d2 WHERE TRIM(d2.name) = TRIM(od.name)
+            )
+            WHERE
+                o.order_time &gt;= #{startTime}
+                AND o.order_time &lt; #{endTime}
+                AND d.time IS NOT NULL
+                AND d.time &gt;= #{startTime}
+                AND d.time &lt;= #{endTime}
+                AND ( (od.total_price IS NOT NULL AND od.total_price &gt; 0) OR IFNULL(od.line_type,'') = 'combo_component' )
+                AND o.transac_status = 'success'
+                AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+                <if test="shopId != null">
+                    AND o.shop_id = #{shopId}
+                </if>
+                <include refid="businessDayFilter"/>
+        ) t
+        GROUP BY DATE_FORMAT(t.bd, '%Y-%m-%d')
+        ORDER BY day_label ASC
+    </select>
+
+    <!-- 兼容无 CTE（WITH）的 MySQL 5.7：与原先 WITH fp/pb 语义相同 -->
+    <select id="selectCustomerNewOld" resultType="map">
+        SELECT
+            SUM(CASE WHEN fp.first_order_time &gt;= #{startTime} AND fp.first_order_time &lt;= #{endTime} THEN 1 ELSE 0 END) AS new_customers,
+            SUM(CASE WHEN fp.first_order_time &lt; #{startTime} THEN 1 ELSE 0 END) AS returning_customers,
+            COUNT(*) AS distinct_buyers
+        FROM (
+            SELECT DISTINCT o.openid
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            AND o.openid IS NOT NULL AND o.openid != ''
+        ) pb
+        INNER JOIN (
+            SELECT openid, MIN(order_time) AS first_order_time
+            FROM t_order
+            WHERE merchantId = '1'
+              AND transac_status = 'success'
+              AND (order_receiving IN ('rec_order', 'off_order') OR order_receiving IS NULL)
+              AND openid IS NOT NULL AND openid != ''
+            GROUP BY openid
+        ) fp ON fp.openid = pb.openid
+    </select>
+
+    <select id="selectCustomerRepurchaseInPeriod" resultType="map">
+        SELECT
+            COUNT(*) AS buyers,
+            SUM(CASE WHEN c &gt;= 2 THEN 1 ELSE 0 END) AS repurchased_buyers
+        FROM (
+            SELECT o.openid, COUNT(*) AS c
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            AND o.openid IS NOT NULL AND o.openid != ''
+            GROUP BY o.openid
+        ) t
+    </select>
+
+    <select id="selectCustomerVisitBuckets" resultType="map">
+        SELECT bucket_label AS bucket_label, COUNT(*) AS buyer_count
+        FROM (
+            SELECT
+                o.openid,
+                CASE
+                    WHEN COUNT(*) = 1 THEN '1'
+                    WHEN COUNT(*) = 2 THEN '2'
+                    WHEN COUNT(*) BETWEEN 3 AND 5 THEN '3-5'
+                    WHEN COUNT(*) BETWEEN 6 AND 10 THEN '6-10'
+                    ELSE '11+'
+                END AS bucket_label
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            AND o.openid IS NOT NULL AND o.openid != ''
+            GROUP BY o.openid
+        ) x
+        GROUP BY bucket_label
+    </select>
+
+    <select id="selectTastePreference" resultType="map">
+        SELECT
+            IFNULL(NULLIF(TRIM(od.selectedSpicy), ''), '(未标注)') AS taste_label,
+            COALESCE(SUM(CAST(od.quantity AS DECIMAL(12,2))), 0) AS quantity,
+            COUNT(*) AS line_count
+        FROM t_order_detail od
+        INNER JOIN t_order o ON od.mId = o.id
+        WHERE
+            o.order_time &gt;= #{startTime}
+            AND o.order_time &lt; #{endTime}
+            AND o.transac_status = 'success'
+            AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+            <if test="shopId != null">
+                AND o.shop_id = #{shopId}
+            </if>
+        GROUP BY IFNULL(NULLIF(TRIM(od.selectedSpicy), ''), '(未标注)')
+        ORDER BY quantity DESC
+        LIMIT 50
+    </select>
+
+    <select id="selectTabooHints" resultType="map">
+        SELECT hint_key AS hint_key, SUM(cnt) AS mention_count FROM (
+            SELECT '忌口' AS hint_key, COUNT(*) AS cnt
+            FROM t_order_detail od
+            INNER JOIN t_order o ON od.mId = o.id
+            WHERE o.order_time &gt;= #{startTime} AND o.order_time &lt; #{endTime}
+              AND o.transac_status = 'success'
+              AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+              AND (IFNULL(o.remark,'') LIKE '%忌口%' OR IFNULL(od.remark,'') LIKE '%忌口%')
+              <if test="shopId != null">AND o.shop_id = #{shopId}</if>
+            UNION ALL
+            SELECT '不吃/不要', COUNT(*)
+            FROM t_order_detail od
+            INNER JOIN t_order o ON od.mId = o.id
+            WHERE o.order_time &gt;= #{startTime} AND o.order_time &lt; #{endTime}
+              AND o.transac_status = 'success'
+              AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+              AND (IFNULL(od.remark,'') LIKE '%不吃%' OR IFNULL(od.remark,'') LIKE '%不要%')
+              <if test="shopId != null">AND o.shop_id = #{shopId}</if>
+            UNION ALL
+            SELECT '过敏', COUNT(*)
+            FROM t_order_detail od
+            INNER JOIN t_order o ON od.mId = o.id
+            WHERE o.order_time &gt;= #{startTime} AND o.order_time &lt; #{endTime}
+              AND o.transac_status = 'success'
+              AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+              AND IFNULL(od.remark,'') LIKE '%过敏%'
+              <if test="shopId != null">AND o.shop_id = #{shopId}</if>
+            UNION ALL
+            SELECT '免辣/不辣', COUNT(*)
+            FROM t_order_detail od
+            INNER JOIN t_order o ON od.mId = o.id
+            WHERE o.order_time &gt;= #{startTime} AND o.order_time &lt; #{endTime}
+              AND o.transac_status = 'success'
+              AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+              AND (IFNULL(od.remark,'') LIKE '%免辣%' OR IFNULL(od.remark,'') LIKE '%不辣%')
+              <if test="shopId != null">AND o.shop_id = #{shopId}</if>
+        ) u
+        GROUP BY hint_key
+    </select>
+
+    <select id="selectMemberOrderContribution" resultType="map">
+        SELECT
+            COALESCE(SUM(CASE WHEN u.user_type = 1 THEN net ELSE 0 END), 0) AS member_net_revenue,
+            COALESCE(SUM(net), 0) AS total_net_revenue,
+            SUM(CASE WHEN u.user_type = 1 THEN 1 ELSE 0 END) AS member_order_rows,
+            COUNT(*) AS order_rows
+        FROM (
+            SELECT
+                o.id,
+                o.openid,
+                <include refid="orderNetExprO"/> AS net
+            FROM t_order o
+            WHERE
+            <include refid="orderSuccessFilter"/>
+            <include refid="orderTimeRange"/>
+            <include refid="shopFilter"/>
+            <include refid="businessDayFilter"/>
+        ) x
+        LEFT JOIN t_user u ON u.openid = x.openid
+    </select>
+
+    <select id="selectCouponTemplateStats" resultType="map">
+        SELECT
+            c.id AS coupon_id,
+            c.coupon_name AS coupon_name,
+            (SELECT COUNT(*) FROM t_user_coupon uc
+             WHERE uc.coupon_id = c.id AND uc.get_time &gt;= #{startTime} AND uc.get_time &lt;= #{endTime}) AS granted_in_range,
+            (SELECT COUNT(*) FROM t_user_coupon uc
+             WHERE uc.coupon_id = c.id AND uc.status = 1
+               AND uc.use_time IS NOT NULL AND uc.use_time &gt;= #{startTime} AND uc.use_time &lt;= #{endTime}) AS used_in_range,
+            (SELECT COALESCE(SUM(<include refid="orderNetExprO"/>), 0)
+             FROM t_user_coupon uc2
+             INNER JOIN t_order o ON o.order_no = uc2.order_no
+             WHERE uc2.coupon_id = c.id AND uc2.status = 1
+               AND uc2.use_time IS NOT NULL AND uc2.use_time &gt;= #{startTime} AND uc2.use_time &lt;= #{endTime}
+               AND o.transac_status = 'success'
+               AND (o.order_receiving IN ('rec_order', 'off_order') OR o.order_receiving IS NULL)
+               <if test="shopId != null">
+                   AND o.shop_id = #{shopId}
+               </if>
+            ) AS driven_net_revenue
+        FROM t_coupon c
+        WHERE EXISTS (
+            SELECT 1 FROM t_user_coupon uc0
+            WHERE uc0.coupon_id = c.id
+              AND (
+                (uc0.get_time &gt;= #{startTime} AND uc0.get_time &lt;= #{endTime})
+                OR (uc0.use_time IS NOT NULL AND uc0.use_time &gt;= #{startTime} AND uc0.use_time &lt;= #{endTime})
+              )
+        )
+    </select>
+
+    <select id="selectActivityPopupStats" resultType="map">
+        SELECT
+            a.id AS activity_id,
+            a.name AS activity_name,
+            CAST(NULL AS DECIMAL(12, 2)) AS budget_amount,
+            COUNT(DISTINCT i.user_id) AS traffic_users,
+            SUM(CASE WHEN i.interaction_type = 'click' THEN 1 ELSE 0 END) AS click_count,
+            SUM(CASE WHEN i.interaction_type = 'show' THEN 1 ELSE 0 END) AS show_count,
+            (
+                SELECT COALESCE(SUM(<include refid="orderNetExprO2"/>), 0)
+                FROM t_order o2
+                WHERE o2.merchantId = '1'
+                  AND o2.transac_status = 'success'
+                  AND (o2.order_receiving IN ('rec_order', 'off_order') OR o2.order_receiving IS NULL)
+                  AND o2.order_time &gt;= GREATEST(#{startTime}, a.start_time)
+                  AND o2.order_time &lt;= LEAST(#{endTime}, IFNULL(a.end_time, '2099-12-31 23:59:59'))
+                  <if test="shopId != null">
+                  AND o2.shop_id = #{shopId}
+                  </if>
+            ) AS overlap_net_revenue
+        FROM t_activity_popup a
+        LEFT JOIN t_user_activity_interaction i
+            ON (
+                TRIM(i.activity_id) = CAST(a.id AS CHAR)
+                OR (i.activity_id REGEXP '^[0-9]+$' AND CAST(i.activity_id AS UNSIGNED) = a.id)
+            )
+            AND i.interaction_time IS NOT NULL
+            AND TRIM(i.interaction_time) != ''
+            AND i.interaction_time &gt;= #{startTime}
+            AND i.interaction_time &lt;= #{endTime}
+        WHERE a.start_time &lt;= #{endTime}
+          AND IFNULL(a.end_time, '2099-12-31') &gt;= #{startTime}
+          <if test="shopId != null">
+          AND (
+            a.apply_shop_ids IS NULL
+            OR TRIM(a.apply_shop_ids) = ''
+            OR TRIM(a.apply_shop_ids) = '[]'
+            OR JSON_CONTAINS(a.apply_shop_ids, CAST(#{shopId} AS JSON), '$')
+          )
+          </if>
+        GROUP BY a.id, a.name, a.start_time, a.end_time
+    </select>
+</mapper>

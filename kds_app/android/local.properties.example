@@ -1,0 +1,8 @@
+# 运行 `flutter pub get` 后由 Flutter 自动生成/更新
+# 首次 clone 后在本机执行：
+#   cd kds_app
+#   flutter pub get
+#   flutter run
+
+sdk.dir=C\:\\Users\\Admin\\AppData\\Local\\Android\\sdk
+flutter.sdk=C\:\\flutter

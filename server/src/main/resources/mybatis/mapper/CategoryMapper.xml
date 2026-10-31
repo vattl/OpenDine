@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lanf.mapper.CategoryMapper">
+
+    <resultMap type="com.lanf.entity.Category" id="CategoryResult">
+
+    </resultMap>
+
+    <select id="list" parameterType="Map" resultMap="CategoryResult">
+        select * from t_category
+        order by sorting asc
+        <if test="start!=null and pageSize!=null">
+            limit #{start},#{pageSize}
+        </if>
+    </select>
+
+    <select id="getTotal" parameterType="Map" resultType="Long">
+        select count(*) from t_category
+    </select>
+
+    <select id="findById" parameterType="Integer" resultMap="CategoryResult">
+        select * from t_category where id=#{id}
+    </select>
+
+
+</mapper>

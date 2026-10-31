@@ -1,0 +1,9 @@
+{
+  "status": "NOT_APPLICABLE_BACKEND",
+  "design_system_version": "DS-1",
+  "tokens": {},
+  "components": {},
+  "responsive": {},
+  "verified_at": "2026-10-15",
+  "note": "No production frontend is owned by this server repository."
+}

@@ -1,0 +1,182 @@
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    max-swallow-size: -1
+    connection-timeout: 300000
+
+auth:
+  jwt:
+    # Required runtime secret (at least 32 bytes). During rotation, move the old
+    # value to AUTH_JWT_PREVIOUS_SECRET until all old tokens have expired.
+    current-secret: "${AUTH_JWT_CURRENT_SECRET:}"
+    previous-secret: "${AUTH_JWT_PREVIOUS_SECRET:}"
+  user-token-ttl-ms: "${AUTH_USER_TOKEN_TTL_MS:604800000}"
+  c-user-identity:
+    # 临时兼容旧版小程序（无 X-User-Token）。全员更新后设为 false
+    compatibility-enabled: "${AUTH_C_USER_IDENTITY_COMPATIBILITY_ENABLED:true}"
+    compatibility-deadline: "${AUTH_C_USER_IDENTITY_COMPATIBILITY_DEADLINE:2026-12-31T23:59:59+08:00}"
+    compatibility-mode: "${AUTH_C_USER_IDENTITY_COMPATIBILITY_MODE:legacy-openid}"
+approval:
+  # Required for QR approval token delivery. Use the same independent high-entropy value on every instance.
+  token-envelope-key: "${APPROVAL_TOKEN_ENVELOPE_KEY:}"
+spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+      enabled: true
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/db_diancan?serverTimezone=Asia/Shanghai
+    username: db_diancan
+    password: "${DB_PASSWORD:}"
+
+mybatis-plus:
+  type-aliases-package: com.lanf.entity,com.lanf.inventory.entity,com.lanf.kds.entity,com.lanf.marketing.entity,com.lanf.notify.entity,com.lanf.payment.entity,com.lanf.printing.entity,com.lanf.report.entity,com.lanf.settings.entity
+  global-config:
+    db-config:
+      id-type: auto #id生成规则：数据库id自增
+  configuration:
+    map-underscore-to-camel-case: false
+    auto-mapping-behavior: full
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  mapper-locations: classpath:mybatis/mapper/*.xml
+
+# 小程序登录等（线上支付商户号/证书仅配置在 t_payment_merchant_config，见运营端 /admin/payment/merchants）
+weixin:
+  accessTokenUrl: https://api.weixin.qq.com/cgi-bin/token
+  subscribe-templates:
+    order-status: ${WEIXIN_TEMPLATE_ORDER_STATUS:your_order_status_template_id}
+    pickup-notice: ${WEIXIN_TEMPLATE_PICKUP_NOTICE:your_pickup_notice_template_id}
+  appid: ${WEIXIN_APPID:your_wechat_appid}
+  secret: "${WEIXIN_SECRET:}"
+
+qrcodeImgsFilePath: /www/wwwroot/qrcodeImgs/
+dishImgsFilePath: /www/wwwroot/dishImgs/
+avatarImgsFilePath: /www/wwwroot/upload/avatar/
+activateImgsFilePath: /www/wwwroot/upload/advertising/
+ImgsFilePath: /www/wwwroot/upload/images/
+appPackagesFilePath: ${APP_PACKAGES_FILE_PATH:/www/wwwroot/upload/packages/}
+
+# 线下收款码：运营上传原图目录；公网根地址用于生成短时中转二维码内嵌链接（须与线上域名一致，建议 HTTPS）
+offlineCollectImgsFilePath: /www/wwwroot/upload/offline-collect/
+# 线上支付 Facade（P2）：true 时 getPrepayId/payByBalance/recharge/回调 走 com.lanf.payment 包
+payment:
+  use-facade: true
+  # 运营后台上传微信商户 PEM 私钥目录（须与运行 Java 的用户可写，建议与 dish/avatar 同属 www:www）
+  private-key-upload-dir: ${PAYMENT_PRIVATE_KEY_UPLOAD_DIR:/www/wwwroot/upload/payment-keys}
+  personal-collect:
+    webhook-secret: ${PERSONAL_COLLECT_WEBHOOK_SECRET:your_webhook_secret}
+
+app:
+  public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
+  websocket:
+    # A slow client is closed after this per-session FIFO budget; clients catch up from durable REST cursors.
+    outbound-workers: 4
+    outbound-queue-capacity: 256
+    session-max-pending-messages: 32
+    session-max-pending-bytes: 65536
+    send-timeout-ms: 5000
+    ack-timeout-ms: 15000
+  image-serve:
+    resize-enabled: true
+    max-q: 1200
+    min-q: 1
+
+order:
+  # 服务费截止日期：该日期及之后不再收取服务费（格式 yyyy-MM-dd），此前按整单 5% 收取
+  service-fee-cutoff-date: 2026-02-25
+
+
+invite:
+  poster:
+    # 背景图路径（支持本地绝对路径/网络URL）
+    # 本地路径示例：D:/images/invite-bg.png
+    # 网络URL示例：https://你的域名/static/poster/invite-bg.png
+    background:
+      path: "/www/wwwroot/upload/poster/bg/invite-bg.jpg"
+    # 二维码位置和尺寸（根据你的背景图调整）
+    qr:
+      x: 39    # 距左侧像素
+      y: 869    # 距顶部像素
+      size: 110 # 二维码尺寸（正方形）
+
+parking:
+  app_id: ${PARKING_APP_ID:your_parking_app_id}
+  token: "${PARKING_TOKEN:}"
+  authorization: "${PARKING_AUTHORIZATION:}"
+
+
+
+# 备货预测（菜品份数）：历史星期几销量 + 公休/长假 + Open-Meteo 天气
+stock-prep-forecast:
+  history-days: 56
+  forecast-days: 7
+  max-dishes-per-day: 45
+  holiday-uplift: 1.16
+  max-composite-factor: 1.48
+  weather-enabled: true
+  holiday-calendar-path: classpath:holidays/cn-public-holidays.json
+  extra-holiday-dates: []
+  plan-max-adjust-ratio: 0.30
+  scheduled-enabled: false
+  scheduled-cron: "0 0 3 * * ?"
+
+zsq:
+  api-base: https://zsq.wlhulian.com/api
+  # 可选：服务端固定账号（不配则走接口传参登录）
+  username: ${ZSQ_USERNAME:}
+  password: "${ZSQ_PASSWORD:}"
+  role: merchant
+  login-mode: password
+  rider-speed-kmh: 20
+  auto-dispatch-channel-count: 1
+  auto-api-enabled: true
+  takeout-sync-enabled: true
+  takeout-sync-interval-ms: 60000
+  takeout-sync-batch-size: 20
+  takeout-sync-budget-ms: 20000
+  # Remote delivery HTTP remains finite under a downstream stall. Pool lease failure is fast and retry-safe callers recover on the next scheduler cycle.
+  http-max-connections: 4
+  http-max-connections-per-route: 4
+  http-connection-request-timeout-ms: 1000
+  http-connect-timeout-ms: 2000
+  http-read-timeout-ms: 5000
+
+kds:
+  projection-reconcile-interval-ms: 30000
+  projection-reconcile-batch-size: 32
+  projection-reconcile-budget-ms: 10000
+  event-cleanup-batch-size: 200
+  event-cleanup-budget-ms: 5000
+
+# 高德 Web 服务：外卖按路网距离计费（须开通「路径规划」Web 服务）
+amap:
+  web-key: ${AMAP_WEB_KEY:}   # 高德 Web 服务 Key；配置后外卖 distance_method=route
+  route-distance-enabled: true
+  route-mode: driving   # driving | bicycling
+  fallback-straight-line: true
+  route-cache-minutes: 30
+
+# 大模型配置（优先读取 LLM_API_KEY / LLM_API_URL / LLM_MODEL 环境变量）
+ai:
+  api:
+    url: "${LLM_API_URL:${AI_API_URL:https://api.deepseek.com/v1/chat/completions}}"
+    key: "${LLM_API_KEY:${AI_API_KEY:${ARK_API_KEY:}}}"
+  model: "${LLM_MODEL:${AI_MODEL:${ARK_MODEL:deepseek-chat}}}"
+
+
+# 飞书素材接收与本地烧烤 AI 工作流对接
+feishu:
+  app-id: "${FEISHU_APP_ID:}"
+  app-secret: "${FEISHU_APP_SECRET:}"
+  verification-token: "${FEISHU_VERIFICATION_TOKEN:}"
+  encrypt-key: "${FEISHU_ENCRYPT_KEY:}"
+  inbox-dir: "${FEISHU_INBOX_DIR:/data/bbq_inbox/}"
+  archive-dir: "${FEISHU_ARCHIVE_DIR:/data/bbq_inbox_archive/}"
+  inbox-token: "${FEISHU_INBOX_TOKEN:}"
+  base-url: "${FEISHU_BASE_URL:https://open.feishu.cn}"

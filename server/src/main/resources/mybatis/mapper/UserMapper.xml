@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lanf.mapper.UserMapper">
+
+    <resultMap type="com.lanf.entity.User" id="UserResult">
+        <!-- 这里可以补充字段映射，比如数据库字段和实体类字段不一致时：
+        <id column="id" property="id"/>
+        <result column="openid" property="openid"/>
+        <result column="invite_code" property="inviteCode"/>
+        <result column="time" property="time"/>
+        -->
+    </resultMap>
+
+    <!-- 根据openid查询：入参String，无问题 -->
+    <select id="selectByOpenid" parameterType="java.lang.String" resultType="com.lanf.entity.User">
+        SELECT * FROM t_user WHERE openid = #{openid}
+    </select>
+
+    <!-- 根据邀请码查询：入参String，无问题 -->
+    <select id="selectByInvite_code" parameterType="java.lang.String" resultType="com.lanf.entity.User">
+        SELECT * FROM t_user WHERE invite_code = #{invite_code}
+    </select>
+
+    <!-- 根据openid列表查询：入参List，参数类型正确 -->
+    <select id="selectByOpenids" parameterType="java.util.List" resultType="com.lanf.entity.User">
+        SELECT * FROM t_user WHERE openid IN
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <!-- 获取所有有效会员（绑定手机号） -->
+    <select id="getAllUsers" resultType="com.lanf.entity.User">
+        SELECT * FROM t_user
+        WHERE phone IS NOT NULL AND TRIM(phone) &lt;&gt; ''
+        ORDER BY time DESC
+    </select>
+
+    <!-- 查询近7天用户：无入参，删除错误的parameterType -->
+    <select id="selectSevenDaysUser" resultType="com.lanf.entity.User">
+        SELECT *
+        FROM t_user
+        WHERE time &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY) AND time &lt;= NOW()
+          AND phone IS NOT NULL AND TRIM(phone) &lt;&gt; ''
+    </select>
+
+    <!-- 查询上月用户：无入参，删除错误的parameterType -->
+    <select id="selectLastMonthUser" resultType="com.lanf.entity.User">
+        SELECT *
+        FROM t_user
+        WHERE DATE_FORMAT(time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')
+          AND phone IS NOT NULL AND TRIM(phone) &lt;&gt; ''
+    </select>
+
+    <!-- 查询本月用户：无入参，删除错误的parameterType -->
+    <select id="selectThisMonthUser" resultType="com.lanf.entity.User">
+        SELECT *
+        FROM t_user
+        WHERE DATE_FORMAT(time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')
+          AND phone IS NOT NULL AND TRIM(phone) &lt;&gt; ''
+    </select>
+
+    <!-- 查询时间段用户：修正参数名star_time→start_time，删除错误的parameterType -->
+    <select id="selectScopeUser" resultType="com.lanf.entity.User">
+        SELECT *
+        FROM t_user
+        WHERE time BETWEEN #{start_time} AND #{end_time}
+          AND phone IS NOT NULL AND TRIM(phone) &lt;&gt; ''
+    </select>
+
+    <!-- 成功订单净额：与会员画像/消费记录一致，按下单人或付款人 openid 归因；同一笔单 openid=pay_openid 只计一次 -->
+    <sql id="userStatsOrderShopFilter">
+        <if test="p.shopId != null">
+            <choose>
+                <when test="p.shopId == 1">
+                    AND (o.shop_id = 1 OR o.shop_id IS NULL)
+                </when>
+                <otherwise>
+                    AND o.shop_id = #{p.shopId}
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- 门店会员判定：在当前门店产生过交易订单（下单人/付款人）、充值记录、或持有分店钱包 -->
+    <sql id="userShopMemberFilter">
+        <if test="p.shopId != null and (p.allShops == null or p.allShops == false) and p.shopId &gt; 0">
+            <choose>
+                <when test="p.shopId == 1">
+                    AND (
+                        u.openid IN (SELECT openid FROM t_order WHERE (shop_id = 1 OR shop_id IS NULL) AND openid IS NOT NULL AND TRIM(openid) &lt;&gt; '')
+                        OR u.openid IN (SELECT pay_openid FROM t_order WHERE (shop_id = 1 OR shop_id IS NULL) AND pay_openid IS NOT NULL AND TRIM(pay_openid) &lt;&gt; '')
+                        OR u.id IN (SELECT user_id FROM t_member_recharge WHERE (shop_id = 1 OR shop_id IS NULL) AND user_id IS NOT NULL)
+                        OR u.openid IN (SELECT openid FROM t_member_recharge WHERE (shop_id = 1 OR shop_id IS NULL) AND openid IS NOT NULL AND TRIM(openid) &lt;&gt; '')
+                        OR u.id IN (SELECT user_id FROM t_shop_member_wallet WHERE shop_id = 1 AND user_id IS NOT NULL)
+                    )
+                </when>
+                <otherwise>
+                    AND (
+                        u.openid IN (SELECT openid FROM t_order WHERE shop_id = #{p.shopId} AND openid IS NOT NULL AND TRIM(openid) &lt;&gt; '')
+                        OR u.openid IN (SELECT pay_openid FROM t_order WHERE shop_id = #{p.shopId} AND pay_openid IS NOT NULL AND TRIM(pay_openid) &lt;&gt; '')
+                        OR u.id IN (SELECT user_id FROM t_member_recharge WHERE shop_id = #{p.shopId} AND user_id IS NOT NULL)
+                        OR u.openid IN (SELECT openid FROM t_member_recharge WHERE shop_id = #{p.shopId} AND openid IS NOT NULL AND TRIM(openid) &lt;&gt; '')
+                        OR u.id IN (SELECT user_id FROM t_shop_member_wallet WHERE shop_id = #{p.shopId} AND user_id IS NOT NULL)
+                    )
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <sql id="userStatsFrom">
+        FROM t_user u
+        LEFT JOIN (
+            SELECT t.user_openid,
+                   SUM(t.amt) AS consume_amount,
+                   MAX(t.pay_time) AS last_consume_time
+            FROM (
+                SELECT TRIM(o.openid) AS user_openid,
+                       o.pay_time,
+                       (IFNULL(o.sett_amount, 0) - IFNULL(o.discount_amount, 0) + IFNULL(o.service_fee, 0)
+                           - IFNULL(o.refund_amount, 0) - IFNULL(o.pay_amount_gift, 0)) AS amt
+                FROM t_order o
+                WHERE o.transac_status = 'success'
+                  AND o.openid IS NOT NULL AND TRIM(o.openid) &lt;&gt; ''
+                <include refid="userStatsOrderShopFilter"/>
+                UNION ALL
+                SELECT TRIM(o.pay_openid) AS user_openid,
+                       o.pay_time,
+                       (IFNULL(o.sett_amount, 0) - IFNULL(o.discount_amount, 0) + IFNULL(o.service_fee, 0)
+                           - IFNULL(o.refund_amount, 0) - IFNULL(o.pay_amount_gift, 0)) AS amt
+                FROM t_order o
+                WHERE o.transac_status = 'success'
+                  AND o.pay_openid IS NOT NULL AND TRIM(o.pay_openid) &lt;&gt; ''
+                  AND (o.openid IS NULL OR TRIM(o.openid) = ''
+                       OR TRIM(o.openid) &lt;&gt; TRIM(o.pay_openid))
+                <include refid="userStatsOrderShopFilter"/>
+            ) t
+            GROUP BY t.user_openid
+        ) pay ON pay.user_openid = TRIM(u.openid)
+    </sql>
+
+    <sql id="userStatsWhere">
+        <where>
+            AND u.phone IS NOT NULL AND TRIM(u.phone) &lt;&gt; ''
+            <if test="p.query != null and p.query != ''">
+                AND (u.name LIKE CONCAT('%', #{p.query}, '%')
+                    OR u.phone LIKE CONCAT('%', #{p.query}, '%')
+                    OR u.openid LIKE CONCAT('%', #{p.query}, '%'))
+            </if>
+            <if test="p.phone != null and p.phone != ''">
+                AND u.phone LIKE CONCAT('%', #{p.phone}, '%')
+            </if>
+            <if test="p.userType != null">
+                AND u.user_type = #{p.userType}
+            </if>
+            <if test="p.registerStartTime != null and p.registerStartTime != ''">
+                AND u.time &gt;= #{p.registerStartTime}
+            </if>
+            <if test="p.registerEndTime != null and p.registerEndTime != ''">
+                AND u.time &lt;= #{p.registerEndTime}
+            </if>
+            <if test="p.minAmount != null">
+                AND IFNULL(pay.consume_amount, 0) &gt;= #{p.minAmount}
+            </if>
+            <if test="p.maxAmount != null">
+                AND IFNULL(pay.consume_amount, 0) &lt;= #{p.maxAmount}
+            </if>
+            <if test="p.storeOnly != null and p.storeOnly == true">
+                AND pay.consume_amount IS NOT NULL AND pay.consume_amount &gt; 0
+            </if>
+            <include refid="userShopMemberFilter"/>
+        </where>
+    </sql>
+
+    <select id="pageUserListWithStats" resultType="java.util.HashMap">
+        SELECT
+            u.id,
+            u.avatar,
+            u.name,
+            u.openid,
+            u.phone,
+            u.points,
+            u.time,
+            u.user_type,
+            u.level,
+            u.invite_code,
+            u.birthday,
+            u.balance,
+            u.principal_balance,
+            u.gift_balance,
+            ROUND(IFNULL(pay.consume_amount, 0), 2) AS consume_amount,
+            pay.last_consume_time,
+            IFNULL(inv.invite_count, 0) AS invite_registered_count,
+            IFNULL(cp.coupon_count, 0) AS available_coupon_count
+        <include refid="userStatsFrom"/>
+
+        LEFT JOIN (
+            SELECT TRIM(ir.inviter_openid) AS inviter_openid, COUNT(1) AS invite_count
+            FROM t_invite_record ir
+            WHERE ir.invitee_openid IS NOT NULL AND TRIM(ir.invitee_openid) &lt;&gt; ''
+            GROUP BY TRIM(ir.inviter_openid)
+        ) inv ON inv.inviter_openid = TRIM(u.openid)
+        LEFT JOIN (
+            SELECT uc.user_openid, COUNT(1) AS coupon_count
+            FROM t_user_coupon uc
+            LEFT JOIN t_coupon c ON uc.coupon_id = c.id
+            WHERE uc.status = 0
+              AND (uc.expire_time IS NULL OR uc.expire_time &gt; NOW())
+              AND c.id IS NOT NULL
+              AND (c.end_time IS NULL OR c.end_time &gt;= NOW())
+            GROUP BY uc.user_openid
+        ) cp ON cp.user_openid = TRIM(u.openid)
+        <include refid="userStatsWhere"/>
+        <choose>
+            <when test="p.amountSort == 'asc'">
+                ORDER BY IFNULL(pay.consume_amount, 0) ASC, u.id DESC
+            </when>
+            <when test="p.amountSort == 'desc'">
+                ORDER BY IFNULL(pay.consume_amount, 0) DESC, u.id DESC
+            </when>
+            <otherwise>
+                ORDER BY u.id DESC
+            </otherwise>
+        </choose>
+        LIMIT #{p.offset}, #{p.pageSize}
+    </select>
+
+    <select id="countUserListWithStats" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        <include refid="userStatsFrom"/>
+        <include refid="userStatsWhere"/>
+    </select>
+
+    <sql id="userListLightWhere">
+        <where>
+            AND u.phone IS NOT NULL AND TRIM(u.phone) &lt;&gt; ''
+            <if test="p.query != null and p.query != ''">
+                AND (u.name LIKE CONCAT('%', #{p.query}, '%')
+                    OR u.phone LIKE CONCAT('%', #{p.query}, '%')
+                    OR u.openid LIKE CONCAT('%', #{p.query}, '%'))
+            </if>
+            <if test="p.phone != null and p.phone != ''">
+                AND u.phone LIKE CONCAT('%', #{p.phone}, '%')
+            </if>
+            <if test="p.userType != null">
+                AND u.user_type = #{p.userType}
+            </if>
+            <if test="p.registerStartTime != null and p.registerStartTime != ''">
+                AND u.time &gt;= #{p.registerStartTime}
+            </if>
+            <if test="p.registerEndTime != null and p.registerEndTime != ''">
+                AND u.time &lt;= #{p.registerEndTime}
+            </if>
+            <include refid="userShopMemberFilter"/>
+        </where>
+    </sql>
+
+    <select id="pageUserListLight" resultType="java.util.HashMap">
+        SELECT
+            u.id, u.avatar, u.name, u.openid, u.phone, u.points, u.time,
+            u.user_type, u.level, u.invite_code, u.birthday,
+            u.balance, u.principal_balance, u.gift_balance,
+            NULL AS consume_amount,
+            NULL AS last_consume_time,
+            NULL AS invite_registered_count,
+            NULL AS available_coupon_count
+        FROM t_user u
+        <include refid="userListLightWhere"/>
+        ORDER BY u.id DESC
+        LIMIT #{p.offset}, #{p.pageSize}
+    </select>
+
+    <select id="countUserListLight" resultType="java.lang.Long">
+        SELECT COUNT(1)
+        FROM t_user u
+        <include refid="userListLightWhere"/>
+    </select>
+
+    <update id="addBalance">
+        UPDATE t_user
+        SET principal_balance = ROUND(IFNULL(principal_balance, 0) + #{amount}, 2),
+            balance = ROUND(IFNULL(principal_balance, 0) + #{amount} + IFNULL(gift_balance, 0), 2)
+        WHERE id = #{userId}
+          AND #{amount} IS NOT NULL
+    </update>
+
+    <update id="addGiftBalance">
+        UPDATE t_user
+        SET gift_balance = ROUND(IFNULL(gift_balance, 0) + #{amount}, 2),
+            balance = ROUND(IFNULL(principal_balance, 0) + IFNULL(gift_balance, 0) + #{amount}, 2)
+        WHERE id = #{userId}
+          AND #{amount} IS NOT NULL
+    </update>
+
+    <update id="addBalanceAndGift">
+        UPDATE t_user
+        SET principal_balance = ROUND(IFNULL(principal_balance, 0) + #{principal}, 2),
+            gift_balance = ROUND(IFNULL(gift_balance, 0) + #{gift}, 2),
+            balance = ROUND(IFNULL(principal_balance, 0) + #{principal} + IFNULL(gift_balance, 0) + #{gift}, 2)
+        WHERE id = #{userId}
+          AND #{principal} IS NOT NULL
+          AND #{gift} IS NOT NULL
+    </update>
+
+    <update id="subtractBalanceIfEnough">
+        UPDATE t_user
+        SET principal_balance = ROUND(IFNULL(principal_balance, 0) - #{amount}, 2),
+            balance = ROUND(IFNULL(principal_balance, 0) - #{amount} + IFNULL(gift_balance, 0), 2)
+        WHERE id = #{userId}
+          AND #{amount} IS NOT NULL
+          AND #{amount} &gt;= 0
+          AND IFNULL(principal_balance, 0) &gt;= #{amount}
+    </update>
+
+    <update id="subtractGiftBalanceIfEnough">
+        UPDATE t_user
+        SET gift_balance = ROUND(IFNULL(gift_balance, 0) - #{amount}, 2),
+            balance = ROUND(IFNULL(principal_balance, 0) + IFNULL(gift_balance, 0) - #{amount}, 2)
+        WHERE id = #{userId}
+          AND #{amount} IS NOT NULL
+          AND #{amount} &gt;= 0
+          AND IFNULL(gift_balance, 0) &gt;= #{amount}
+    </update>
+
+    <update id="subtractBalanceSplitIfEnough">
+        UPDATE t_user
+        SET principal_balance = ROUND(IFNULL(principal_balance, 0) - #{principal}, 2),
+            gift_balance = ROUND(IFNULL(gift_balance, 0) - #{gift}, 2),
+            balance = ROUND(IFNULL(principal_balance, 0) - #{principal} + IFNULL(gift_balance, 0) - #{gift}, 2)
+        WHERE id = #{userId}
+          AND #{principal} IS NOT NULL
+          AND #{gift} IS NOT NULL
+          AND #{principal} &gt;= 0
+          AND #{gift} &gt;= 0
+          AND IFNULL(principal_balance, 0) &gt;= #{principal}
+          AND IFNULL(gift_balance, 0) &gt;= #{gift}
+    </update>
+
+    <!-- 充值入账后校对：balance = principal_balance + gift_balance -->
+    <update id="reconcileUserBalanceTotal">
+        UPDATE t_user
+        SET balance = ROUND(IFNULL(principal_balance, 0) + IFNULL(gift_balance, 0), 2)
+        WHERE id = #{userId}
+    </update>
+
+</mapper>

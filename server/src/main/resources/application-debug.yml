@@ -1,0 +1,62 @@
+server:
+  address: 127.0.0.1
+  port: 18080
+  ssl:
+    enabled: false
+
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: "${DEBUG_DB_URL:jdbc:mysql://127.0.0.1:3307/db_diancan_debug?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false}"
+    username: "${DEBUG_DB_USERNAME:diancan_debug}"
+    password: "${DEBUG_DB_PASSWORD:}"
+
+app:
+  scheduling:
+    enabled: false
+  public-base-url: http://127.0.0.1:18080
+
+qrcodeImgsFilePath: "${DEBUG_DATA_DIR:.local/debug}/uploads/qrcode/"
+dishImgsFilePath: "${DEBUG_DATA_DIR:.local/debug}/uploads/dish/"
+avatarImgsFilePath: "${DEBUG_DATA_DIR:.local/debug}/uploads/avatar/"
+activateImgsFilePath: "${DEBUG_DATA_DIR:.local/debug}/uploads/advertising/"
+ImgsFilePath: "${DEBUG_DATA_DIR:.local/debug}/uploads/images/"
+offlineCollectImgsFilePath: "${DEBUG_DATA_DIR:.local/debug}/uploads/offline-collect/"
+
+payment:
+  private-key-upload-dir: "${DEBUG_DATA_DIR:.local/debug}/uploads/payment-keys/"
+  # 仅本地 debug 可兼容明文；生产配置不得开启。
+  allow-plaintext-credentials: true
+
+weixin:
+  appid: "${DEBUG_WEIXIN_APPID:debug-disabled}"
+  secret: "${DEBUG_WEIXIN_SECRET:debug-disabled}"
+  subscribe-templates:
+    order-status: ""
+    pickup-notice: ""
+
+ai:
+  api:
+    url: "${DEBUG_AI_API_URL:}"
+    key: "${DEBUG_AI_API_KEY:}"
+  model: "${DEBUG_AI_MODEL:}"
+
+parking:
+  app_id: "${DEBUG_PARKING_APP_ID:}"
+  token: "${DEBUG_PARKING_TOKEN:}"
+  authorization: "${DEBUG_PARKING_AUTHORIZATION:}"
+
+zsq:
+  api-base: http://127.0.0.1:9/disabled
+  username: ""
+  password: ""
+  auto-api-enabled: false
+  takeout-sync-enabled: false
+
+amap:
+  web-key: ""
+  route-distance-enabled: false
+
+stock-prep-forecast:
+  scheduled-enabled: false

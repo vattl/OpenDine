@@ -1,0 +1,10 @@
+{
+  "project_baseline": "PB-2",
+  "design_system_baseline": "DS-1",
+  "status": "ACTIVE",
+  "last_reviewed": "2026-10-23",
+  "history": [
+    {"version": "PB-1", "date": "2026-10-15", "reason": "Initial verified server baseline"},
+    {"version": "PB-2", "date": "2026-10-23", "reason": "WI-058 unified business invariants and backend governance inventory"}
+  ]
+}

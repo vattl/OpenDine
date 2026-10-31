@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>老肥家餐饮 · 电子发票抬头登记</title>
+    <style>
+        :root {
+            --primary: #1890ff;
+            --primary-hover: #096dd9;
+            --success: #52c41a;
+            --warning: #faad14;
+            --error: #ff4d4f;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --bg-page: #f4f6f8;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            line-height: 1.5;
+            padding-bottom: 40px;
+        }
+        .header {
+            background: linear-gradient(135deg, #1890ff 0%, #0050b3 100%);
+            color: #ffffff;
+            padding: 24px 20px 32px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+        .header p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .main-container {
+            max-width: 540px;
+            margin: -16px auto 0 auto;
+            padding: 0 16px;
+        }
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            margin-bottom: 16px;
+        }
+        .order-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 14px;
+            margin-bottom: 14px;
+        }
+        .order-meta .label {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+        .order-meta .value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+            word-break: break-all;
+        }
+        .amount-box {
+            text-align: right;
+            min-width: 110px;
+        }
+        .amount-box .label {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+        .amount-box .amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f5222d;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-pending {
+            background: #fffbe6;
+            color: var(--warning);
+            border: 1px solid #ffe58f;
+        }
+        .status-submitted {
+            background: #e6f7ff;
+            color: var(--primary);
+            border: 1px solid #91d5ff;
+        }
+        .status-success {
+            background: #f6ffed;
+            color: var(--success);
+            border: 1px solid #b7eb8f;
+        }
+        .status-error {
+            background: #fff1f0;
+            color: var(--error);
+            border: 1px solid #ffa39e;
+        }
+        .privacy-banner {
+            background: #f0f7ff;
+            border: 1px solid #d0e7ff;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #0050b3;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+        .form-label .required {
+            color: var(--error);
+            margin-right: 4px;
+        }
+        .form-input {
+            width: 100%;
+            height: 42px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0 12px;
+            font-size: 14px;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+        .form-tip {
+            font-size: 12px;
+            color: var(--text-sub);
+            margin-top: 4px;
+        }
+        .type-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .type-option {
+            flex: 1;
+            text-align: center;
+            height: 40px;
+            line-height: 38px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--text-sub);
+            background: #fafafa;
+            transition: all 0.2s;
+        }
+        .type-option.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #e6f7ff;
+            font-weight: 600;
+        }
+        .btn-submit {
+            width: 100%;
+            height: 44px;
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        .btn-submit:hover {
+            background: var(--primary-hover);
+        }
+        .btn-submit:disabled {
+            background: #bfbfbf;
+            cursor: not-allowed;
+        }
+        .btn-retry {
+            margin-top: 8px;
+            padding: 6px 14px;
+            background: #ffffff;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+        .submitted-info {
+            display: none;
+            text-align: center;
+            padding: 12px 0;
+        }
+        .submitted-icon {
+            font-size: 48px;
+            color: var(--success);
+            margin-bottom: 12px;
+        }
+        .submitted-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .submitted-desc {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            text-align: left;
+        }
+        .detail-label {
+            color: var(--text-sub);
+            width: 90px;
+        }
+        .detail-val {
+            font-weight: 500;
+            color: var(--text-main);
+            flex: 1;
+            text-align: right;
+            word-break: break-all;
+        }
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.78);
+            color: #fff;
+            padding: 12px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 85%;
+            z-index: 9999;
+            display: none;
+            text-align: center;
+            line-height: 1.4;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        }
+        .error-banner {
+            display: none;
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #cf1322;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>老肥家餐饮 · 电子发票服务</h1>
+        <p>门店发票抬头在线登记与开具申请</p>
+    </div>
+
+    <div class="main-container">
+        <!-- 订单概览卡片 -->
+        <div class="card">
+            <div class="order-summary">
+                <div class="order-meta">
+                    <div class="label">消费订单编号</div>
+                    <div class="value" id="displayOrderNo">加载中...</div>
+                </div>
+                <div class="amount-box">
+                    <div class="label">可开票金额</div>
+                    <div class="amount" id="displayAmount">¥ 0.00</div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 13px; color: var(--text-sub);">发票类型：增值税普通发票 (电子)</span>
+                <span class="status-badge status-pending" id="statusBadge">查询中...</span>
+            </div>
+        </div>
+
+        <!-- 财务集中人工开票提示 -->
+        <div style="background: #fffbe6; border: 1px solid #ffe58f; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 13px; color: #d46b08; line-height: 1.5;">
+            <span>⏰ <strong>开票提示</strong>：本店采用财务集中人工开票模式。您提交抬头后，财务将在工作日集中处理开具，开具后您可在此页面直接查验发票号码及下载凭证。</span>
+        </div>
+
+        <!-- 隐私保护提示横幅 -->
+        <div class="privacy-banner">
+            <span>🛡️</span>
+            <span>本次申请受安全凭据保护，提交后敏感信息将加密脱敏显示。</span>
+        </div>
+
+        <!-- 异常提示区域 -->
+        <div class="error-banner" id="errorBanner">
+            <div id="errorBannerMsg">网络连接异常，未能获取订单信息</div>
+            <button type="button" class="btn-retry" onclick="loadInvoiceInfo()">🔄 重新尝试连接</button>
+        </div>
+
+        <!-- 填写发票抬头卡片 -->
+        <div class="card" id="formCard">
+            <div class="form-group">
+                <label class="form-label">抬头类型</label>
+                <div class="type-selector">
+                    <div class="type-option active" id="optCompany" onclick="selectType('COMPANY')">企业 / 单位</div>
+                    <div class="type-option" id="optPersonal" onclick="selectType('PERSONAL')">个人 / 非企业</div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="buyerTitle"><span class="required">*</span>发票抬头名称</label>
+                <input type="text" class="form-input" id="buyerTitle" placeholder="请输入单位营业执照全称" autocomplete="off">
+            </div>
+
+            <div class="form-group" id="taxNoGroup">
+                <label class="form-label" for="buyerTaxNo"><span class="required">*</span>统一社会信用代码 / 税号</label>
+                <input type="text" class="form-input" id="buyerTaxNo" placeholder="请输入15-20位信用代码或纳税人识别号" maxlength="20" style="text-transform: uppercase;" autocomplete="off">
+                <div class="form-tip">支持大写字母及数字，无需输入短横线或空格</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="buyerEmail">电子邮箱（接收电子发票凭证）</label>
+                <input type="email" class="form-input" id="buyerEmail" placeholder="例如：example@domain.com" autocomplete="off">
+                <div class="form-tip">支持各类主流邮箱；全角符号与空格将自动修正</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="buyerPhone">手机号码（接收开票提醒通知）</label>
+                <input type="tel" class="form-input" id="buyerPhone" placeholder="请输入11位中国大陆手机号码" maxlength="11" autocomplete="off">
+                <div class="form-tip" style="color: var(--primary);">注：电子邮箱与手机号码至少填写一项，用于接收发票凭证</div>
+            </div>
+
+            <button type="button" class="btn-submit" id="btnSubmit" onclick="submitInvoice()">提交开票申请</button>
+        </div>
+
+        <!-- 已提交 / 已开具回显卡片 -->
+        <div class="card submitted-info" id="submittedCard">
+            <div class="submitted-icon" id="submittedIcon">✓</div>
+            <div class="submitted-title" id="submittedTitle">开票申请已提交</div>
+            <div class="submitted-desc" id="submittedDesc">发票抬头登记已提交，商家财务将核对订单并处理开票凭证，开具结果将通知您的预留联系方式。</div>
+
+            <div style="background: #fafafa; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+                <div class="detail-row">
+                    <span class="detail-label">发票抬头</span>
+                    <span class="detail-val" id="viewTitle">--</span>
+                </div>
+                <div class="detail-row" id="viewTaxNoRow">
+                    <span class="detail-label">纳税人识别号</span>
+                    <span class="detail-val" id="viewTaxNo">--</span>
+                </div>
+                <div class="detail-row" id="viewEmailRow">
+                    <span class="detail-label">接收邮箱</span>
+                    <span class="detail-val" id="viewEmail">--</span>
+                </div>
+                <div class="detail-row" id="viewPhoneRow">
+                    <span class="detail-label">手机号码</span>
+                    <span class="detail-val" id="viewPhone">--</span>
+                </div>
+                <div class="detail-row" id="viewFapiaoRow" style="display: none;">
+                    <span class="detail-label">发票号码</span>
+                    <span class="detail-val" id="viewFapiaoNo" style="color: var(--success); font-weight: 700;">--</span>
+                </div>
+            </div>
+
+            <div id="downloadBox" style="display: none; margin-bottom: 12px;">
+                <a id="btnDownload" href="#" target="_blank" class="btn-submit" style="text-decoration: none; display: inline-block;">📥 下载电子发票 (PDF)</a>
+            </div>
+
+            <button type="button" id="btnModify" onclick="modifyInvoice()" style="background: none; border: none; color: var(--primary); font-size: 13px; cursor: pointer; margin-top: 12px;">修改发票抬头信息</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let orderNo = urlParams.get('orderNo') 
+                   || urlParams.get('order_no') 
+                   || urlParams.get('order') 
+                   || urlParams.get('orderId') 
+                   || urlParams.get('id') 
+                   || '';
+        const applyId = urlParams.get('applyId') || urlParams.get('apply_id') || '';
+        const token = urlParams.get('token') || '';
+
+        let currentType = 'COMPANY';
+
+        const CANDIDATE_API_PREFIXES = [
+            '/api/invoice',
+            '/order/invoice/public',
+            '/public/invoice'
+        ];
+        let detectedApiPrefix = null;
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 3200);
+        }
+
+        function showErrorBanner(msg) {
+            const b = document.getElementById('errorBanner');
+            const m = document.getElementById('errorBannerMsg');
+            m.textContent = msg || '网络连接异常，未能获取订单信息';
+            b.style.display = 'block';
+        }
+
+        function hideErrorBanner() {
+            document.getElementById('errorBanner').style.display = 'none';
+        }
+
+        function selectType(type) {
+            currentType = type;
+            const optComp = document.getElementById('optCompany');
+            const optPers = document.getElementById('optPersonal');
+            const taxGroup = document.getElementById('taxNoGroup');
+            const titleInput = document.getElementById('buyerTitle');
+
+            if (type === 'COMPANY') {
+                optComp.classList.add('active');
+                optPers.classList.remove('active');
+                taxGroup.style.display = 'block';
+                titleInput.placeholder = '请输入单位营业执照全称';
+            } else {
+                optPers.classList.add('active');
+                optComp.classList.remove('active');
+                taxGroup.style.display = 'none';
+                titleInput.placeholder = '请输入个人姓名或组织名称';
+            }
+        }
+
+        async function fetchWithFallback(endpointSuffix, options = {}) {
+            let prefixesToTry = detectedApiPrefix ? [detectedApiPrefix] : [...CANDIDATE_API_PREFIXES];
+            let lastError = null;
+
+            for (const prefix of prefixesToTry) {
+                const url = prefix + endpointSuffix;
+                try {
+                    const res = await fetch(url, options);
+                    const contentType = res.headers.get('content-type') || '';
+
+                    if (res.ok && contentType.includes('application/json')) {
+                        const json = await res.json();
+                        detectedApiPrefix = prefix;
+                        return json;
+                    }
+
+                    if (!res.ok || contentType.includes('text/html')) {
+                        lastError = new Error(`接口 ${url} 返回非预期响应 (HTTP ${res.status})`);
+                        continue;
+                    }
+
+                    const json = await res.json();
+                    detectedApiPrefix = prefix;
+                    return json;
+                } catch (e) {
+                    lastError = e;
+                    console.warn(`[Invoice] 请求 ${url} 失败:`, e);
+                }
+            }
+
+            throw lastError || new Error('所有后端候选接口均未能响应');
+        }
+
+        async function loadInvoiceInfo() {
+            hideErrorBanner();
+
+            if (window.location.protocol === 'file:') {
+                showErrorBanner('检测到正在以本地文件(file://)直接打开。请通过扫码或使用 http:// 服务器地址访问开票页。');
+                document.getElementById('statusBadge').textContent = '本地文件模式';
+                return;
+            }
+
+            if (!orderNo || !token) {
+                showToast('未检测到有效开票凭据或订单参数，请重新扫码');
+                document.getElementById('displayOrderNo').textContent = orderNo || '未指定订单';
+                document.getElementById('displayAmount').textContent = '¥ 0.00';
+                document.getElementById('statusBadge').className = 'status-badge status-error';
+                document.getElementById('statusBadge').textContent = '凭据缺失';
+                showErrorBanner('缺少安全访问令牌 (token)，无法加载开票信息。请重新扫描收银小票二维码。');
+                return;
+            }
+            document.getElementById('displayOrderNo').textContent = orderNo;
+            document.getElementById('statusBadge').textContent = '查询中...';
+
+            try {
+                const queryStr = `?orderNo=${encodeURIComponent(orderNo)}&applyId=${encodeURIComponent(applyId)}&token=${encodeURIComponent(token)}`;
+                const json = await fetchWithFallback(`/info${queryStr}`, { method: 'GET' });
+                
+                const isOk = json && (json.code === 0 || json.code === 200);
+                if (isOk && json.data) {
+                    const data = json.data;
+                    hideErrorBanner();
+
+                    if (data.orderNo) {
+                        orderNo = data.orderNo;
+                        document.getElementById('displayOrderNo').textContent = data.orderNo;
+                    }
+                    
+                    const amt = (data.invoiceAmount !== null && data.invoiceAmount !== undefined) 
+                                ? Number(data.invoiceAmount) : 0;
+                    document.getElementById('displayAmount').textContent = '¥ ' + amt.toFixed(2);
+                    
+                    const badge = document.getElementById('statusBadge');
+                    const status = data.invoiceStatus || 'PENDING_SCAN';
+                    
+                    if (status === 'SUCCESS') {
+                        badge.className = 'status-badge status-success';
+                        badge.textContent = '发票已开具';
+                        showSubmittedView(data, true);
+                    } else if (status === 'TITLE_SUBMITTED' || status === 'SUBMITTED' || status === 'ISSUING') {
+                        badge.className = 'status-badge status-submitted';
+                        badge.textContent = '抬头已提交，开票中';
+                        showSubmittedView(data, false);
+                    } else if (status === 'REJECTED') {
+                        badge.className = 'status-badge status-error';
+                        badge.textContent = '申请已被驳回';
+                        showRejectedView(data);
+                    } else {
+                        badge.className = 'status-badge status-pending';
+                        badge.textContent = '待填写发票抬头';
+                        document.getElementById('formCard').style.display = 'block';
+                        document.getElementById('submittedCard').style.display = 'none';
+                    }
+                } else {
+                    const msg = json.msg || '查询订单发票信息失败';
+                    showToast(msg);
+                    showErrorBanner(msg);
+                    document.getElementById('statusBadge').className = 'status-badge status-error';
+                    document.getElementById('statusBadge').textContent = '查询失败';
+                    document.getElementById('displayAmount').textContent = '¥ 0.00';
+                }
+            } catch (e) {
+                console.error(e);
+                const errMsg = e.message || '网络连接异常';
+                showToast('网络连接异常，请点击重试');
+                showErrorBanner(`网络连接异常 (${errMsg})，请检查网络或点击重新尝试`);
+                document.getElementById('statusBadge').className = 'status-badge status-error';
+                document.getElementById('statusBadge').textContent = '网络异常';
+            }
+        }
+
+        function showRejectedView(data) {
+            document.getElementById('formCard').style.display = 'none';
+            document.getElementById('submittedCard').style.display = 'block';
+
+            document.getElementById('submittedIcon').textContent = '⚠️';
+            document.getElementById('submittedIcon').style.color = 'var(--danger)';
+            document.getElementById('submittedTitle').textContent = '开票申请已被驳回';
+            const reason = data.rejectReason || '信息有误或不符合税局规范，请核对后修改重新提交。';
+            document.getElementById('submittedDesc').innerHTML = `<strong style="color: var(--danger);">驳回原因：</strong>${reason}`;
+
+            document.getElementById('btnModify').style.display = 'inline-block';
+            document.getElementById('btnModify').textContent = '✏️ 重新修改发票抬头并提交';
+
+            document.getElementById('viewTitle').textContent = data.buyerTitle || '--';
+            if (data.buyerTaxNo) {
+                document.getElementById('viewTaxNoRow').style.display = 'flex';
+                document.getElementById('viewTaxNo').textContent = data.buyerTaxNo;
+            } else {
+                document.getElementById('viewTaxNoRow').style.display = 'none';
+            }
+
+            if (data.buyerEmail) {
+                document.getElementById('viewEmailRow').style.display = 'flex';
+                document.getElementById('viewEmail').textContent = data.buyerEmail;
+            } else {
+                document.getElementById('viewEmailRow').style.display = 'none';
+            }
+
+            if (data.buyerPhone) {
+                document.getElementById('viewPhoneRow').style.display = 'flex';
+                document.getElementById('viewPhone').textContent = data.buyerPhone;
+            } else {
+                document.getElementById('viewPhoneRow').style.display = 'none';
+            }
+
+            document.getElementById('viewFapiaoRow').style.display = 'none';
+            document.getElementById('downloadBox').style.display = 'none';
+        }
+
+        function showSubmittedView(data, isSuccess) {
+            document.getElementById('formCard').style.display = 'none';
+            document.getElementById('submittedCard').style.display = 'block';
+
+            if (isSuccess) {
+                document.getElementById('submittedTitle').textContent = '发票开具成功';
+                document.getElementById('submittedDesc').textContent = '发票已生成，请在下方点击直接下载查看';
+                document.getElementById('btnModify').style.display = 'none';
+            } else {
+                document.getElementById('submittedTitle').textContent = '开票申请已提交';
+                document.getElementById('submittedDesc').textContent = '发票抬头登记已提交，商家财务将核对订单并处理开票凭证，开具结果将通知您的预留联系方式。';
+                document.getElementById('btnModify').style.display = 'inline-block';
+            }
+
+            document.getElementById('viewTitle').textContent = data.buyerTitle || '--';
+            if (data.buyerTaxNo) {
+                document.getElementById('viewTaxNoRow').style.display = 'flex';
+                document.getElementById('viewTaxNo').textContent = data.buyerTaxNo;
+            } else {
+                document.getElementById('viewTaxNoRow').style.display = 'none';
+            }
+
+            if (data.buyerEmail) {
+                document.getElementById('viewEmailRow').style.display = 'flex';
+                document.getElementById('viewEmail').textContent = data.buyerEmail;
+            } else {
+                document.getElementById('viewEmailRow').style.display = 'none';
+            }
+
+            if (data.buyerPhone) {
+                document.getElementById('viewPhoneRow').style.display = 'flex';
+                document.getElementById('viewPhone').textContent = data.buyerPhone;
+            } else {
+                document.getElementById('viewPhoneRow').style.display = 'none';
+            }
+
+            if (data.fapiaoNumber) {
+                document.getElementById('viewFapiaoRow').style.display = 'flex';
+                document.getElementById('viewFapiaoNo').textContent = data.fapiaoNumber;
+            }
+            if (data.fapiaoFileUrl) {
+                const u = String(data.fapiaoFileUrl).trim();
+                if ((u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/')) 
+                    && !u.toLowerCase().includes('javascript:') && !u.includes('<') && !u.includes('>')) {
+                    document.getElementById('downloadBox').style.display = 'block';
+                    document.getElementById('btnDownload').href = u;
+                } else {
+                    document.getElementById('downloadBox').style.display = 'none';
+                }
+            } else {
+                document.getElementById('downloadBox').style.display = 'none';
+            }
+        }
+
+        function modifyInvoice() {
+            document.getElementById('submittedCard').style.display = 'none';
+            document.getElementById('formCard').style.display = 'block';
+        }
+
+        async function submitInvoice() {
+            let buyerTitle = document.getElementById('buyerTitle').value.trim();
+            let rawTaxNo = document.getElementById('buyerTaxNo').value;
+            let rawEmail = document.getElementById('buyerEmail').value;
+            let rawPhone = document.getElementById('buyerPhone').value;
+
+            if (!buyerTitle) {
+                showToast('请填写发票抬头名称');
+                return;
+            }
+
+            let cleanTaxNo = '';
+            if (currentType === 'COMPANY') {
+                cleanTaxNo = (rawTaxNo || '').trim().replace(/[\s\-]/g, '').toUpperCase();
+                if (!cleanTaxNo) {
+                    showToast('企业抬头必须提供统一社会信用代码/税号');
+                    return;
+                }
+                if (!/^[0-9A-Z]{15,20}$/.test(cleanTaxNo)) {
+                    showToast('税号格式不正确（须为15-20位大写字母或数字，请仔细核对）');
+                    return;
+                }
+            }
+
+            let cleanEmail = (rawEmail || '').trim()
+                .replace(/[\uff01-\uffee]/g, function(ch) {
+                    return String.fromCharCode(ch.charCodeAt(0) - 0xfee0);
+                })
+                .replace(/\s+/g, '')
+                .replace('。', '.')
+                .toLowerCase();
+
+            let cleanPhone = (rawPhone || '').trim().replace(/[\s\-]/g, '');
+
+            const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+            const isEmailValid = cleanEmail.length > 0 && emailRegex.test(cleanEmail);
+            const isPhoneValid = /^1[3-9]\d{9}$/.test(cleanPhone);
+
+            if (!isEmailValid && !isPhoneValid) {
+                if (cleanEmail.length > 0 && !isEmailValid) {
+                    showToast('邮箱格式有误，请核对或直接填写11位手机号码');
+                } else if (cleanPhone.length > 0 && !isPhoneValid) {
+                    showToast('手机号码须为11位有效数字，或填写电子邮箱');
+                } else {
+                    showToast('请提供电子邮箱或手机号码（至少填写一项以便接收发票）');
+                }
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+            btn.textContent = '正在提交...';
+
+            try {
+                const payload = {
+                    orderNo: orderNo,
+                    applyId: applyId,
+                    token: token,
+                    titleType: currentType,
+                    buyerTitle: buyerTitle,
+                    buyerTaxNo: cleanTaxNo,
+                    buyerEmail: isEmailValid ? cleanEmail : '',
+                    buyerPhone: isPhoneValid ? cleanPhone : ''
+                };
+
+                const json = await fetchWithFallback('/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (json && (json.code === 0 || json.code === 200)) {
+                    showToast('发票抬头提交成功！');
+                    loadInvoiceInfo();
+                } else {
+                    showToast(json.msg || '提交失败，请重试');
+                    btn.disabled = false;
+                    btn.textContent = '提交开票申请';
+                }
+            } catch (e) {
+                console.error(e);
+                showToast('提交请求异常，请点击重试');
+                btn.disabled = false;
+                btn.textContent = '提交开票申请';
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', loadInvoiceInfo);
+    </script>
+</body>
+</html>

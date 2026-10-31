@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lanf.mapper.InviteRecordMapper">
+
+    <resultMap type="com.lanf.entity.InviteRecord" id="CategoryResult">
+
+    </resultMap>
+
+    <select id="selectByInviterOpenid" parameterType="Map" resultMap="CategoryResult">
+        select * from t_invite_record WHERE inviter_openid = #{inviter_openid};
+
+    </select>
+
+    <select id="selectByInviteCode" parameterType="Map" resultMap="CategoryResult">
+        select status,inviter_openid,reward_type,reward_id,reward_time from t_invite_record WHERE invite_code = #{invite_code} AND invitee_openid = #{invitee_openid};
+
+    </select>
+
+
+
+</mapper>

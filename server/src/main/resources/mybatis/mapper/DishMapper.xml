@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lanf.mapper.DishMapper">
+
+    <resultMap type="com.lanf.entity.Dish" id="DishResult">
+        <association property="type" column="typeId" select="com.lanf.mapper.CategoryMapper.findById"></association>
+    </resultMap>
+
+    <!-- <select id="list" parameterType="Map" resultMap="DishResult">
+        select d.* from t_dish d
+        left join t_category c on d.typeId = c.id
+        order by c.sorting asc, d.sorting asc
+        <if test="start!=null and pageSize!=null">
+            limit #{start},#{pageSize}
+        </if>
+    </select>
+
+    <select id="getTotal" parameterType="Map" resultType="Long">
+        select count(*) from t_dish d
+    </select> -->
+
+    <!--
+      门店上下文列表：合并 t_dish_shop 覆盖列（价格/规格模板/名称/图片/单位/分类/排序/出餐时长），
+      NULL 覆盖回退总部 t_dish 对应字段。覆盖列迁移见 docs/db_migration_dish_shop_full_overrides.sql。
+    -->
+    <select id="list" parameterType="Map" resultMap="DishResult">
+        <choose>
+            <when test="shop_id != null">
+                select d.id,
+                       ifnull(ds.name_override, d.name) as name,
+                       ifnull(ds.image_override, d.image) as image,
+                       ifnull(ds.type_id_override, d.typeId) as typeId,
+                       d.monthlysale,
+                       ifnull(ds.sorting_override, d.sorting) as sorting,
+                       ifnull(ds.unitprice, d.unitprice) as unitprice,
+                       ifnull(ds.unit_override, d.unit) as unit,
+                       d.quantity,
+                       ds.stock as stock,
+                       d.time,
+                       ifnull(ds.onsale_override, d.onsale) as onsale,
+                       ds.sold_out as sold_out,
+                       ifnull(ds.specification_override, d.specification) as specification,
+                       ifnull(ds.serving_duration_override, d.serving_duration_minutes) as serving_duration_minutes
+                from t_dish d
+                inner join t_dish_shop ds on ds.dish_id = d.id and ds.shop_id = #{shop_id}
+                left join t_category c on c.id = ifnull(ds.type_id_override, d.typeId)
+                left join t_category_shop cs on cs.category_id = c.id and cs.shop_id = #{shop_id}
+                order by ifnull(cs.sorting_override, c.sorting) asc, c.id asc,
+                         ifnull(ds.sorting_override, d.sorting) asc, d.id asc
+                <if test="start!=null and pageSize!=null">
+                    limit #{start},#{pageSize}
+                </if>
+            </when>
+            <otherwise>
+                select d.* from t_dish d
+                left join t_category c on d.typeId = c.id
+                order by c.sorting asc, c.id asc, d.sorting asc, d.id asc
+                <if test="start!=null and pageSize!=null">
+                    limit #{start},#{pageSize}
+                </if>
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="getTotal" parameterType="Map" resultType="Long">
+        select count(*) from t_dish d
+        <if test="shop_id != null">
+            inner join t_dish_shop ds on ds.dish_id = d.id and ds.shop_id = #{shop_id}
+        </if>
+    </select>
+
+    <!-- 总部标准菜：全量 t_dish，不按门店关联过滤 -->
+    <select id="listHqTemplate" parameterType="Map" resultMap="DishResult">
+        select d.* from t_dish d
+        left join t_category c on d.typeId = c.id
+        <where>
+            <if test="query != null and query != ''">
+                and d.name like concat('%', #{query}, '%')
+            </if>
+        </where>
+        order by c.sorting asc, c.id asc, d.sorting asc, d.id asc
+        <if test="start!=null and pageSize!=null">
+            limit #{start},#{pageSize}
+        </if>
+    </select>
+
+    <select id="getTotalHqTemplate" parameterType="Map" resultType="Long">
+        select count(*) from t_dish d
+        <where>
+            <if test="query != null and query != ''">
+                and d.name like concat('%', #{query}, '%')
+            </if>
+        </where>
+    </select>
+
+</mapper>

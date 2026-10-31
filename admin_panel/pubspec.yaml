@@ -1,0 +1,88 @@
+name: admin_panel_flutter
+description: "Flutter rewrite of the restaurant admin and cashier console."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# The following defines the version and build number for your application.
+# A version number is three numbers separated by dots, like 1.2.43
+# followed by an optional build number separated by a +.
+# Both the version and the builder number may be overridden in flutter
+# build by specifying --build-name and --build-number, respectively.
+# In Android, build-name is used as versionName while build-number used as versionCode.
+# Read more about Android versioning at https://developer.android.com/studio/publish/versioning
+# In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
+# Read more about iOS versioning at
+# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
+# In Windows, build-name is used as the major, minor, and patch parts
+# of the product and file versions while build-number is used as the build suffix.
+version: 2.1.16+223
+
+environment:
+  sdk: ^3.11.4
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+  shop_core:
+    path: ../packages/shop_core
+  path: ^1.9.1
+  path_provider: ^2.1.3
+  crypto: ^3.0.6
+  sqlite3: ^3.4.0
+  sqlite3_flutter_libs: ^0.5.24
+  go_router: ^14.0.0
+  flutter_riverpod: ^2.5.1
+  flutter_secure_storage: ^9.2.2
+  flutter_map: ^8.3.1
+  latlong2: ^0.10.1
+  file_picker: ^8.1.2
+  http: ^1.6.0
+  qr_flutter: ^4.1.0
+  app_links: ^7.0.0
+  mobile_scanner: ^7.4.2
+  url_launcher: ^6.3.3
+  open_filex: ^5.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
+
+# The following section is specific to Flutter packages.
+flutter:
+
+  # The following line ensures that the Material Icons font is
+  # included with your application, so that you can use the icons in
+  # the material Icons class.
+  uses-material-design: true
+
+  assets:
+    - assets/icons/pos/
+    - assets/icons/pos/laofei_brand_avatar.png
+
+  fonts:
+    - family: NotoSansSC
+      fonts:
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/roboto-regular.ttf
+          weight: 400
+        - asset: assets/fonts/roboto-medium.ttf
+          weight: 500
+        - asset: assets/fonts/roboto-bold.ttf
+          weight: 700
+
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
+      name_windows: winsqlite3
+      name: sqlite3

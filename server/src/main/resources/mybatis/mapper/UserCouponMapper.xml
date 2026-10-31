@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.lanf.mapper.UserCouponMapper">
+
+    <!-- 结果映射：完全适配 UserCoupon 实体（t_user_coupon + t_coupon 联合字段） -->
+    <resultMap type="com.lanf.dto.UserCouponDTO" id="UserCouponResultMap">
+        <!-- 1. t_user_coupon 表字段（与实体完全对应） -->
+        <id column="id" property="id" /> <!-- 主键ID -->
+        <result column="user_openid" property="user_openid" /> <!-- 用户openid（实体字段） -->
+        <result column="coupon_id" property="coupon_id" /> <!-- 关联优惠券ID -->
+        <result column="get_time" property="get_time" /> <!-- 领取时间 -->
+        <result column="use_time" property="use_time" /> <!-- 使用时间 -->
+        <result column="order_no" property="order_no" /> <!-- 关联订单号 -->
+        <result column="status" property="status" /> <!-- 状态：0-未使用 1-已使用 2-已失效 -->
+        <result column="expire_time" property="expire_time" /> <!-- 失效时间 -->
+
+        <!-- 2. t_coupon 表字段（需实体中已添加对应属性） -->
+        <result column="coupon_name" property="coupon_name" /> <!-- 优惠券名称 -->
+        <result column="discount_value" property="discount_value" /> <!-- 折扣（如90=9折） -->
+        <result column="coupon_type" property="coupon_type" /> <!-- 满减门槛 -->
+        <result column="min_amount" property="min_amount" /> <!-- 满减门槛 -->
+        <result column="start_time" property="start_time" /> <!-- 有效期开始时间 -->
+        <result column="end_time" property="end_time" /> <!-- 有效期结束时间 -->
+        <result column="description" property="description" /> <!-- 优惠券描述 -->
+        <result column="apply_dining_type" property="apply_dining_type" />
+        <result column="apply_dish_ids" property="apply_dish_ids" />
+        <result column="apply_shop_ids" property="apply_shop_ids" />
+    </resultMap>
+
+    <!-- 查询用户优惠券列表（联合查询 t_user_coupon 和 t_coupon） -->
+    <select id="getUserCoupon" parameterType="Map" resultMap="UserCouponResultMap">
+        SELECT
+        -- t_user_coupon 表字段（与实体一致）
+        uc.id,
+        uc.user_openid,
+        uc.coupon_id,
+        uc.get_time,
+        uc.use_time,
+        uc.order_no,
+        uc.status,
+        uc.expire_time,
+        -- t_coupon 表字段（优惠券详情）
+        c.coupon_name,
+        c.discount_value,
+        c.min_amount,
+        c.coupon_type,
+        c.start_time,
+        c.end_time,
+        c.description,
+        c.apply_dining_type,
+        c.apply_dish_ids,
+        c.apply_shop_ids
+        FROM t_user_coupon uc -- 用户优惠券表（左表）
+        LEFT JOIN t_coupon c -- 左连接优惠券表
+        ON uc.coupon_id = c.id -- 关联条件：用户优惠券表的 coupon_id = 优惠券表主键 id
+        <where>
+            <if test="user_openid != null and user_openid != ''">
+                AND uc.user_openid = #{user_openid}
+            </if>
+
+            <if test="status != null">
+                AND uc.status = #{status} <!-- 状态筛选：0-未使用 1-已使用 2-已失效 -->
+            </if>
+            <!-- 仅「未使用」列表：排除用户券已过期、模板缺失、模板已结束；未到模板 start_time 仍返回（列表展示「未生效」券） -->
+            <if test="status != null and status.equals(0)">
+                AND (uc.expire_time IS NULL OR uc.expire_time &gt; #{now})
+                AND c.id IS NOT NULL
+                AND (c.end_time IS NULL OR c.end_time &gt;= #{now})
+            </if>
+
+        </where>
+        <!-- 按领取时间倒序 -->
+        ORDER BY uc.get_time DESC
+    </select>
+
+    <!-- couponId = t_user_coupon.id（用户券记录ID）；user_openid = 当前用户。 -->
+    <select id="selectValidCouponById" resultMap="UserCouponResultMap">
+        select
+        uc.id,
+        uc.user_openid,
+        uc.coupon_id,
+        uc.get_time,
+        uc.use_time,
+        uc.order_no,
+        uc.status,
+        uc.expire_time,
+        c.coupon_name,
+        c.discount_value,
+        c.min_amount,
+        c.coupon_type,
+        c.start_time,
+        c.end_time,
+        c.description,
+        c.apply_dining_type,
+        c.apply_dish_ids,
+        c.apply_shop_ids
+        FROM t_user_coupon uc
+        LEFT JOIN t_coupon c ON uc.coupon_id = c.id
+        <where>
+            <if test="couponId != null">
+                AND uc.id = #{couponId}
+            </if>
+            <if test="user_openid != null and user_openid != ''">
+                AND uc.user_openid = #{user_openid}
+            </if>
+            AND uc.status = 0
+        </where>
+        ORDER BY uc.get_time DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectUserCouponJoinById" resultMap="UserCouponResultMap">
+        select
+        uc.id,
+        uc.user_openid,
+        uc.coupon_id,
+        uc.get_time,
+        uc.use_time,
+        uc.order_no,
+        uc.status,
+        uc.expire_time,
+        c.coupon_name,
+        c.discount_value,
+        c.min_amount,
+        c.coupon_type,
+        c.start_time,
+        c.end_time,
+        c.description,
+        c.apply_dining_type,
+        c.apply_dish_ids,
+        c.apply_shop_ids
+        FROM t_user_coupon uc
+        LEFT JOIN t_coupon c ON uc.coupon_id = c.id
+        WHERE uc.id = #{id}
+          AND uc.user_openid = #{user_openid}
+        LIMIT 1
+    </select>
+
+    <select id="countUserCouponForPage" resultType="long">
+        SELECT COUNT(1)
+        FROM t_user_coupon uc
+        LEFT JOIN t_coupon c ON uc.coupon_id = c.id
+        <where>
+            <if test="user_openid != null and user_openid != ''">
+                AND uc.user_openid = #{user_openid}
+            </if>
+            <if test="status != null">
+                AND uc.status = #{status}
+            </if>
+            <if test="status != null and status.equals(0)">
+                AND (uc.expire_time IS NULL OR uc.expire_time &gt; #{now})
+                AND c.id IS NOT NULL
+                AND (c.end_time IS NULL OR c.end_time &gt;= #{now})
+            </if>
+        </where>
+    </select>
+
+    <select id="getUserCouponPage" resultMap="UserCouponResultMap">
+        SELECT
+        uc.id,
+        uc.user_openid,
+        uc.coupon_id,
+        uc.get_time,
+        uc.use_time,
+        uc.order_no,
+        uc.status,
+        uc.expire_time,
+        c.coupon_name,
+        c.discount_value,
+        c.min_amount,
+        c.coupon_type,
+        c.start_time,
+        c.end_time,
+        c.description,
+        c.apply_dining_type,
+        c.apply_dish_ids,
+        c.apply_shop_ids
+        FROM t_user_coupon uc
+        LEFT JOIN t_coupon c ON uc.coupon_id = c.id
+        <where>
+            <if test="user_openid != null and user_openid != ''">
+                AND uc.user_openid = #{user_openid}
+            </if>
+            <if test="status != null">
+                AND uc.status = #{status}
+            </if>
+            <if test="status != null and status.equals(0)">
+                AND (uc.expire_time IS NULL OR uc.expire_time &gt; #{now})
+                AND c.id IS NOT NULL
+                AND (c.end_time IS NULL OR c.end_time &gt;= #{now})
+            </if>
+        </where>
+        ORDER BY uc.get_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <sql id="adminUserCouponWhere">
+        <where>
+            <if test="couponIds != null and couponIds.size() &gt; 0">
+                AND uc.coupon_id IN
+                <foreach collection="couponIds" item="cid" open="(" separator="," close=")">
+                    #{cid}
+                </foreach>
+            </if>
+            <if test="couponId != null">
+                AND uc.coupon_id = #{couponId}
+            </if>
+            <if test="userOpenid != null and userOpenid != ''">
+                AND uc.user_openid = #{userOpenid}
+            </if>
+            <if test="status != null">
+                AND uc.status = #{status}
+            </if>
+            <if test="orderNoLike != null and orderNoLike != ''">
+                AND uc.order_no LIKE CONCAT('%', #{orderNoLike}, '%')
+            </if>
+            <if test="getTimeStart != null">
+                AND uc.get_time &gt;= #{getTimeStart}
+            </if>
+            <if test="getTimeEnd != null">
+                AND uc.get_time &lt;= #{getTimeEnd}
+            </if>
+        </where>
+    </sql>
+
+    <select id="adminCountUserCoupons" resultType="long">
+        SELECT COUNT(1)
+        FROM t_user_coupon uc
+        LEFT JOIN t_coupon c ON uc.coupon_id = c.id
+        <include refid="adminUserCouponWhere"/>
+    </select>
+
+    <select id="adminUserCouponPage" resultMap="UserCouponResultMap">
+        SELECT
+        uc.id,
+        uc.user_openid,
+        uc.coupon_id,
+        uc.get_time,
+        uc.use_time,
+        uc.order_no,
+        uc.status,
+        uc.expire_time,
+        c.coupon_name,
+        c.discount_value,
+        c.min_amount,
+        c.coupon_type,
+        c.start_time,
+        c.end_time,
+        c.description,
+        c.apply_dining_type,
+        c.apply_dish_ids,
+        c.apply_shop_ids
+        FROM t_user_coupon uc
+        LEFT JOIN t_coupon c ON uc.coupon_id = c.id
+        <include refid="adminUserCouponWhere"/>
+        ORDER BY uc.id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+</mapper>

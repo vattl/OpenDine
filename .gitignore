@@ -1,0 +1,57 @@
+# Cursor / IDE
+.cursor/
+.idea/
+*.iml
+*.swp
+.vscode/
+
+# 构建与依赖（根目录及子项目）
+target/
+build/
+**/build/
+node_modules/
+dist/
+admin_panel/node_modules/
+admin_panel/dist/
+admin_panel/.cowork-temp/
+
+# Flutter / Dart 产物
+.dart_tool/
+**/.dart_tool/
+.flutter-plugins*
+**/.flutter-plugins*
+*.apk
+*.aab
+*.app
+*.ipa
+
+# Local Maven cache
+.m2/
+**/.m2/
+
+# 小程序依赖与编译产物
+miniprogram/node_modules/
+miniprogram/unpackage/
+miniprogram/.wx/
+
+# 环境 / 密钥
+.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.key
+*.cer
+*.crt
+
+# 本地大包 / 备份与缓存
+*.zip
+.local/
+.ai-backup*/
+.ai-runtime/
+*.bak-*
+
+# 通用
+.DS_Store
+Thumbs.db
+*.log

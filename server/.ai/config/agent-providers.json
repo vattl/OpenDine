@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "providers": [
+    {
+      "id": "codex",
+      "display_name": "OpenAI Codex CLI",
+      "executable": "codex",
+      "version_argv": ["codex", "--version"],
+      "install": {
+        "prerequisite": "npm",
+        "argv": ["npm", "install", "-g", "@openai/codex"],
+        "official_url": "https://github.com/openai/codex"
+      },
+      "auth": {
+        "status_argv": ["codex", "login", "status"],
+        "login_argv": ["codex", "login"],
+        "env_names": ["OPENAI_API_KEY"],
+        "official_url": "https://developers.openai.com/codex/auth"
+      },
+      "live_probe_argv": ["codex", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "Reply with exactly {nonce}. Do not call tools."],
+      "model_hint": "configured Codex model"
+    },
+    {
+      "id": "claude",
+      "display_name": "Anthropic Claude Code",
+      "executable": "claude",
+      "version_argv": ["claude", "--version"],
+      "install": {
+        "prerequisite": "npm",
+        "argv": ["npm", "install", "-g", "@anthropic-ai/claude-code"],
+        "official_url": "https://docs.anthropic.com/en/docs/claude-code/getting-started"
+      },
+      "auth": {
+        "status_argv": ["claude", "auth", "status"],
+        "login_argv": ["claude", "auth", "login"],
+        "env_names": ["ANTHROPIC_API_KEY"],
+        "official_url": "https://docs.anthropic.com/en/docs/claude-code/getting-started"
+      },
+      "live_probe_argv": ["claude", "-p", "Reply with exactly {nonce}. Do not call tools.", "--permission-mode", "plan", "--max-turns", "1", "--output-format", "text"],
+      "model_hint": "configured Claude model"
+    },
+    {
+      "id": "gemini",
+      "display_name": "Google Gemini CLI",
+      "executable": "gemini",
+      "version_argv": ["gemini", "--version"],
+      "install": {
+        "prerequisite": "npm",
+        "argv": ["npm", "install", "-g", "@google/gemini-cli"],
+        "official_url": "https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/installation.mdx"
+      },
+      "auth": {
+        "status_argv": [],
+        "login_argv": ["gemini"],
+        "env_names": ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GOOGLE_APPLICATION_CREDENTIALS"],
+        "official_url": "https://github.com/google-gemini/gemini-cli/blob/main/docs/get-started/authentication.mdx"
+      },
+      "live_probe_argv": ["gemini", "--approval-mode", "plan", "--output-format", "text", "Reply with exactly {nonce}. Do not call tools."],
+      "model_hint": "configured Gemini model"
+    }
+  ]
+}
+

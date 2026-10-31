@@ -1,0 +1,46 @@
+{
+  "workItem": "WI-074",
+  "verifiedAt": "2026-10-28T10:20:00+08:00",
+  "verificationDecision": "VERIFIED",
+  "interactions": [
+    {
+      "interactionId": "INT-001",
+      "description": "页面加载携带 token 查询发票与订单信息",
+      "classification": "AVAILABLE",
+      "endpoint": "GET /api/invoice/info",
+      "testMethod": "PublicInvoiceControllerTest#getInvoiceInfo_allCandidateRoutesSupported",
+      "testResult": "PASS",
+      "securityEnforcement": "Token mandatory, 401 on missing, 403 on invalid/expired, 404 on missing record (no auto-init)"
+    },
+    {
+      "interactionId": "INT-002",
+      "description": "抬头类型切换（企业/个人单选）",
+      "classification": "DERIVABLE",
+      "clientVerification": "DOM event handler selectType('COMPANY'/'PERSONAL') toggles taxNoGroup display and placeholder dynamically",
+      "testResult": "PASS"
+    },
+    {
+      "interactionId": "INT-003",
+      "description": "提交发票抬头、税号及接收方式",
+      "classification": "AVAILABLE",
+      "endpoint": "POST /api/invoice/submit",
+      "testMethod": "PublicInvoiceControllerTest#submitInvoice_allCandidateRoutesSupported",
+      "testResult": "PASS",
+      "securityEnforcement": "Requires valid token, sets token_used_at, transitions to TITLE_SUBMITTED, sanitizes PII in logs"
+    },
+    {
+      "interactionId": "INT-004",
+      "description": "提交按钮防抖禁用与等待反馈",
+      "classification": "DERIVABLE",
+      "clientVerification": "btnSubmit.disabled set to true with '正在提交...' loading text immediately on click; re-enabled on error",
+      "testResult": "PASS"
+    },
+    {
+      "interactionId": "INT-005",
+      "description": "发票文件下载链接安全协议校验",
+      "classification": "DERIVABLE",
+      "clientVerification": "Protocol whitelist enforces startsWith http://, https://, / and rejects javascript: or HTML injections",
+      "testResult": "PASS"
+    }
+  ]
+}

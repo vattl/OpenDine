@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.2.RELEASE</version>
+        <relativePath/> <!-- 保持与父版本一致 -->
+    </parent>
+    <groupId>com.lanf</groupId>
+    <artifactId>diancan</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>diancan</name>
+    <description>Demo project for Spring Boot</description>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <java.version>1.8</java.version>
+        <!-- 升级内嵌 Tomcat：9.0.37 Mapper.internalMap 在并发/畸形 URI 解析时会抛 AssertionError: null（请求解析层崩溃），
+             9.0.38+ 已修复；Spring Boot 2.3.2 通过 tomcat.version 属性覆盖，兼容 Java 8 -->
+        <tomcat.version>9.0.43</tomcat.version>
+        <!-- 统一管理依赖版本，避免冲突 -->
+        <httpclient.version>4.5.13</httpclient.version>
+        <wechatpay.sdk.version>0.4.9</wechatpay.sdk.version>
+        <gson.version>2.8.9</gson.version>
+        <caffeine.version>2.9.3</caffeine.version>
+        <lombok.version>1.18.24</lombok.version>
+        <prod.resource.exclude.debug>__never_match_debug_resource__</prod.resource.exclude.debug>
+        <prod.resource.exclude.zsq>__never_match_zsq_resource__</prod.resource.exclude.zsq>
+    </properties>
+    <dependencies>
+        <!-- Spring Boot核心依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <!-- 不需要指定版本，继承父工程版本 -->
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.20</version> <!-- 推荐使用最新稳定版 -->
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>2.0.1.Final</version>
+        </dependency>
+        <!-- Hibernate Validator 实现 -->
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>6.1.5.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>1.5.5.Final</version>
+        </dependency>
+        <!-- MapStruct 处理器（编译时生成实现类） -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct-processor</artifactId>
+            <version>1.5.5.Final</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>javase</artifactId>
+            <version>3.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- 图片处理（可选，简化IO操作） -->
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.18.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 数据库相关 -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.1.10</version>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.3.2</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt</artifactId>
+            <version>0.9.1</version> <!-- 稳定版本，与你的代码兼容 -->
+        </dependency>
+        <!-- jjwt 0.9.x 依赖 javax.xml.bind（JDK 11+ 已移除），JDK 8 下无影响 -->
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.83</version> <!-- 较新的稳定版本，兼容性更好 -->
+        </dependency>
+        <dependency>
+            <groupId>org.jdom</groupId>
+            <artifactId>jdom2</artifactId>
+            <version>2.0.6</version>
+            <scope>compile</scope> <!-- 确保编译时可见 -->
+        </dependency>
+        <!-- 工具类 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+            <version>${caffeine.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>4.6.3</version>
+        </dependency>
+
+        <!-- HTTP客户端 -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>${httpclient.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpmime</artifactId>
+            <version>${httpclient.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.4.1</version>
+        </dependency>
+
+        <!-- JSON处理 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <!-- 继承父工程版本，避免与Spring冲突 -->
+        </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+
+        <!-- 微信支付SDK (只保留一个最新稳定版本) -->
+        <dependency>
+            <groupId>com.github.wechatpay-apiv3</groupId>
+            <artifactId>wechatpay-apache-httpclient</artifactId>
+            <version>${wechatpay.sdk.version}</version>
+        </dependency>
+
+        <!-- JWT -->
+        <dependency>
+            <groupId>com.auth0</groupId>
+            <artifactId>java-jwt</artifactId>
+            <version>3.2.0</version>
+        </dependency>
+
+        <!-- Servlet API -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>4.0.1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <!-- 生产打包：mvnw package -Pprod —— 以 application.yml 为主配置，打 jar 时剔除 debug 专用资源。
+         注意：用 maven-jar-plugin 排除而非 resources 排除，避免影响本地 debug 运行所需的 target/classes -->
+    <profiles>
+        <profile>
+            <id>quality</id>
+            <build><plugins>
+                <plugin>
+                    <groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId><version>0.8.12</version>
+                    <executions>
+                        <execution><goals><goal>prepare-agent</goal></goals></execution>
+                        <execution><id>report</id><phase>verify</phase><goals><goal>report</goal></goals></execution>
+                        <execution><id>critical-coverage</id><phase>verify</phase><goals><goal>check</goal></goals>
+                            <configuration><rules><rule><element>BUNDLE</element>
+                                <limits><limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.50</minimum></limit></limits>
+                            </rule></rules><includes><include>com/lanf/filter/*</include></includes></configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin><groupId>org.cyclonedx</groupId><artifactId>cyclonedx-maven-plugin</artifactId><version>2.8.2</version>
+                    <executions><execution><phase>verify</phase><goals><goal>makeAggregateBom</goal></goals></execution></executions>
+                </plugin>
+            </plugins></build>
+        </profile>
+        <profile>
+            <id>security-scan</id>
+            <build><plugins><plugin>
+                <groupId>org.owasp</groupId><artifactId>dependency-check-maven</artifactId><version>12.1.0</version>
+                <configuration><failBuildOnCVSS>7</failBuildOnCVSS><formats><format>HTML</format><format>JSON</format></formats><nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable></configuration>
+                <executions><execution><phase>verify</phase><goals><goal>check</goal></goals></execution></executions>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>prod</id>
+            <properties>
+                <prod.resource.exclude.debug>**/application-debug.yml</prod.resource.exclude.debug>
+                <prod.resource.exclude.zsq>**/application-zsq-example.yml</prod.resource.exclude.zsq>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/application-debug.yml</exclude>
+                                <exclude>**/application-zsq-example.yml</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <resources>
+            <resource><directory>src/main/resources</directory><excludes>
+                <exclude>**/*.pem</exclude><exclude>**/*.pfx</exclude>
+                <exclude>**/*.p12</exclude><exclude>**/*.zip</exclude>
+                <exclude>${prod.resource.exclude.debug}</exclude>
+                <exclude>${prod.resource.exclude.zsq}</exclude>
+            </excludes></resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

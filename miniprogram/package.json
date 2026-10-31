@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "test:takeout-address": "node scripts/test-takeout-address.mjs && node scripts/test-location-auth.mjs && node scripts/check-takeout-sfc.mjs"
+  },
+  "dependencies": {
+    "e-commerce_price": "^1.0.3",
+    "goeasy": "^2.1.11",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.1",
+    "swiper": "^5.4.5",
+    "vue-awesome-swiper": "^4.1.1"
+  },
+  "devDependencies": {
+    "browserslist": "^4.28.1"
+  }
+}
