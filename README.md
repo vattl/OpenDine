@@ -33,7 +33,8 @@
 OpenDine/
 ├── server/          # ☕ 后端微服务 (Spring Boot 2.3.2 / MyBatis-Plus / Redis / WebSocket)
 ├── miniprogram/     # 📱 顾客端：微信点餐小程序 (DCloud Uni-App / Vue)
-├── admin_panel/     # 💻 商家端：智能收银台与管理工作台 (Flutter 3.x 跨端：Windows / Android / Web)
+├── pos_app/         # 🖥️ 收银端：POS 点餐收银一体机应用 (Flutter 3.x：Windows / Android 平板)
+├── admin_panel/     # 💻 管理端：门店运营与财务管理后台 (Flutter 3.x：Web / 桌面端)
 ├── kds_app/         # 🍳 后厨端：KDS 实时出餐协同大屏 (Flutter 3.x 跨端：大屏看板 / 双模容灾)
 ├── packages/        # 📦 前端共享基础组件包 (shop_core 共享领域模型)
 ├── deploy/          # 🚀 容器化部署 (Docker-Compose / Nginx 反向代理与 WebSocket 升级 / 数据库初始化脚本)
@@ -97,22 +98,32 @@ OpenDine/
 
 ---
 
-### 3. 商户端：智能收银台 POS (`admin_panel/`)
+### 3. 前台收银端：智能收银机 POS (`pos_app/`)
 
-- **技术栈**：Flutter 3.x（支持 Windows 桌面触摸屏收银、Android 平板/手持机、Web 端）。
+- **技术栈**：Flutter 3.x（专为 Windows 触摸屏一体机、Android 平板/收银机打造）。
 - **核心业务模块 (`lib/src/features/`)**：
-  - **桌台与前台收银 (`pos/`, `tables/`)**：桌台网格状态（空闲、就餐中、已结账未清台）、开台点菜、整单改价、折扣优惠、就餐人数修改、挂单/取单、换桌/并桌。
-  - **全渠道结算 (`cashier_bills/`)**：支持微信付款码刷卡支付（Micropay）、微信主扫（Native）、现金记账、会员余额划扣、免单、挂账与组合支付。
-  - **逆向交易与退款**：反结账（还原单据重新结算）、整单退款与指定单品退菜。
+  - **桌台与点餐收银 (`pos/`, `tables/`)**：桌台网格状态视图（空闲、就餐中、已买单待清台）、快速点餐、整单改价、折扣优惠、就餐人数调整、挂单池与取单、转台/并台。
+  - **全渠道结算与支付 (`pos/`, `cashier_payment/`)**：微信付款码刷卡（Micropay）、微信主扫（Native）、现金收款与找零、会员储值卡扣款、免单、挂账与多方式组合支付。
+  - **逆向交易与退款**：反结账（撤单重算）、退单退款与前台选菜退菜。
   - **日结与交接班 (`cashier_shift/`)**：当班人员钱箱现金盘点、各渠道收单汇总、打印交班结算小票、营业时段禁止日结防误操作。
-  - **菜品沽清与调价 (`cashier_catalog/`)**：前台一键快速标记菜品沽清/恢复上架，实时同步至点餐小程序。
-  - **会员管理 (`cashier_member/`)**：根据手机号查询会员画像、储值余额、后台人工充值与充赠流水。
-  - **小票模版与设备设置 (`cashier_printing/`, `cashier_settings/`)**：内置小票可视化排版设计器、飞鹅云打印机绑定、多联打印规则分配。
-  - **局域网双模协作 (`kds_local/`)**：内置本地服务端发现与证书生成工具，保障在断公网状态下本地局域网点单直接推向后厨 KDS。
+  - **热敏小票与设备 (`cashier_printing/`, `cashier_settings/`)**：热敏打印模版设计、多联分单打印规则、钱箱与扫码枪设备绑定。
+  - **局域网容灾与本地 KDS 代理 (`kds_local/`)**：内置 SQLite 离线缓存与局域网广播通道，断公网状态下点菜与结账直连后厨。
 
 ---
 
-### 4. 后厨端：KDS 实时出餐大屏 (`kds_app/`)
+### 4. 运营管理端：门店运营与财务后台 (`admin_panel/`)
+
+- **技术栈**：Flutter 3.x（支持 Web 浏览器、Windows 桌面端，店长与财务专用后台）。
+- **核心业务模块 (`lib/src/features/`)**：
+  - **营业数据看板 (`dashboard/`, `realtime/`)**：全天营业额、订单量、客单价实时大屏监控。
+  - **订单中心与审核 (`orders/`)**：全渠道历史订单检索、订单明细流水、退款与反结账操作审核流。
+  - **菜品与供应链管理 (`catalog/`)**：菜品分类资料维护、BOM 原材料消耗拆解、AI 销量预测模型参数配置。
+  - **组织架构与权限 (`users/`)**：员工账号管理、细粒度角色权限（RBAC）配置。
+  - **财务挂账与报表 (`receivable_management/`, `reports/`)**：企业挂账客户应收账款流水对账、多维度营业日结与月结报表。
+
+---
+
+### 5. 后厨端：KDS 实时出餐大屏 (`kds_app/`)
 
 - **技术栈**：Flutter 3.x（深度适配 1080P/2K/4K 厨房大屏显示与触摸屏工位机）。
 - **通信架构 (`core/ws/`, `core/lan_v2/`)**：
@@ -172,15 +183,20 @@ cd server
 3. 检查 `utils/requestUtil.js` 中的 `baseUrl` 指向本地开发接口（默认已设为 `http://localhost:8080`）；
 4. 点击编译即可直接在模拟器中体验扫码点餐与外卖链路。
 
-#### 3. 收银端与 KDS 后厨端 (`admin_panel/` & `kds_app/`)
+#### 3. 前端各端运行指引 (`pos_app/`, `admin_panel/`, `kds_app/`)
 - **环境要求**：Flutter SDK 3.x+
 ```bash
-# 运行智能收银台（支持 Windows 桌面端或 Web 浏览器）
-cd admin_panel
+# 1. 运行前台收银台 POS（收银触摸一体机 / 平板）
+cd pos_app
 flutter pub get
-flutter run -d windows # 或 flutter run -d chrome
+flutter run -d windows
 
-# 运行 KDS 后厨大屏
+# 2. 运行门店运营管理后台（Web 浏览器 / 桌面端）
+cd ../admin_panel
+flutter pub get
+flutter run -d chrome # 或 flutter run -d windows
+
+# 3. 运行后厨 KDS 大屏
 cd ../kds_app
 flutter pub get
 flutter run -d windows # 或 flutter run -d chrome
