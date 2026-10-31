@@ -1,0 +1,15 @@
+{
+  "schema": "ai-development-os.worktree-command-profile/v1",
+  "setup": null,
+  "baseline": [
+    "python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "server/.ai/scripts/tests",
+    "-p",
+    "test_*.py"
+  ]
+}
+
