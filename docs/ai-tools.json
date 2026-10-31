@@ -1,0 +1,535 @@
+{
+  "description": "与 docs/openapi.yaml 中 C 端（小程序/顾客）接口对齐的 AI function calling 工具列表；名称采用 snake_case，description 标注对应 OpenAPI path",
+  "field_description_reference": {
+    "openid": "用户微信唯一标识",
+    "order_no": "业务订单号（系统内订单主键号）",
+    "orderNo": "业务订单号（部分支付接口使用驼峰字段）",
+    "table_number": "桌号（如 21/A21）",
+    "number": "桌号查询参数（兼容字段）",
+    "number_of_diners": "就餐人数",
+    "cid": "菜品分类编码（业务约定）",
+    "name": "菜品名称",
+    "quantity": "数量（字符串数字也可）",
+    "unit": "单位（串/份/杯等）",
+    "total_price": "该行菜品总价",
+    "sett_amount": "订单商品原价（含打包费，不含服务费）",
+    "discount_amount": "订单优惠金额",
+    "coupon_id": "优惠券ID",
+    "remark": "备注",
+    "status": "状态筛选字段（如订单/优惠券状态）"
+  },
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "generateOrderNo",
+        "description": "内部：生成新订单号（建议 create_order 前调用；无对应独立 HTTP path）",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_openid",
+        "description": "POST /order/getOpenid：用 wx.login 的 code 换取 openid",
+        "parameters": {
+          "type": "object",
+          "properties": { "code": { "type": "string", "description": "微信 jscode2session 的 code" } },
+          "required": ["code"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_user_info",
+        "description": "POST /order/getUserInfo：按 openid 取用户信息与可用券数量",
+        "parameters": {
+          "type": "object",
+          "properties": { "openid": { "type": "string", "description": "用户微信唯一标识 openid" } },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "update_user",
+        "description": "POST /order/updateUser：更新昵称/手机/生日（生日仅首次可设）",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid" },
+            "name": { "type": "string", "description": "用户昵称" },
+            "phone": { "type": "string", "description": "用户手机号" },
+            "birthday": { "type": "string", "description": "yyyy-MM-dd，仅首次可写" }
+          },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_official_phone_number",
+        "description": "POST /order/getOfficialPhoneNumber：微信 getPhoneNumber 的 code 换手机号并更新用户",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "code": { "type": "string", "description": "微信 getPhoneNumber 的 code" },
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid" },
+            "invite_code": { "type": "string", "description": "邀请码（可选）" }
+          },
+          "required": ["code"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "table_verify",
+        "description": "GET /order/table_verify：校验桌号是否存在",
+        "parameters": {
+          "type": "object",
+          "properties": { "number": { "type": "string", "description": "桌号（如 21/A21）" } },
+          "required": ["number"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_table_status",
+        "description": "GET /order/table_status：查询桌台占用/状态",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "number": { "type": "string", "description": "推荐字段，桌号" },
+            "table_number": { "type": "string", "description": "兼容字段，桌号" },
+            "tableNumber": { "type": "string", "description": "兼容字段，桌号" }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_business",
+        "description": "POST /order/Business：营业状态与接单开关",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "calculate_finish_time",
+        "description": "POST /order/calculateFinishTime：预估出餐时间",
+        "parameters": {
+          "type": "object",
+          "properties": { "dineInOrTakeOut": { "type": "string", "description": "堂食或打包" } }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_dishes",
+        "description": "与 GET /dish/listAll 一致的在售菜单（缓存）：仅 onsale=true；无在售菜的分类不出现",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "list_all_dishes",
+        "description": "GET /dish/listAll：仅含至少一道上架菜的分类；dishList 仅 onsale=true",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "create_order",
+        "description": "POST /order/create：用户确认下单时调用。必须收集完整菜品、数量、桌号后再调用。",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "openid": { "type": "string","description": "用户openid" },
+            "dineInOrTakeOut": { "type": "string", "enum": ["堂食", "打包"], "description": "就餐方式：堂食或打包" },
+            "number_of_diners": { "type": "string","description": "就餐人数" },
+            "table_number": { "type": "string","description": "桌号" },
+            "order_no": { "type": "string","description": "订单号" },
+            "sett_amount": { "type": "number","description": "商品原价+打包费" },
+            "discount_amount": { "type": "number","description": "优惠金额" },
+            "coupon_id": { "type": "integer","description": "优惠券ID" },
+            "remark": { "type": "string","description": "订单备注" },
+            "goods_list": {
+              "type": "array",
+              "description": "订单明细，对应表 t_order_detail；下列带「服务端写入」的字段新建下单勿传",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer", "description": "明细主键 t_order_detail.id，自增；新建勿传" },
+                  "mId": { "type": "integer", "description": "订单主表ID t_order_detail.mId；服务端保存主单后写入，新建勿传" },
+                  "name": { "type": "string", "description": "菜品名称 t_order_detail.name" },
+                  "quantity": { "type": "string", "description": "数量 t_order_detail.quantity" },
+                  "unit": { "type": "string", "description": "单位 t_order_detail.unit，如 串/份/杯" },
+                  "image": { "type": "string", "description": "菜品图片URL t_order_detail.image，可选" },
+                  "total_price": { "type": "number", "description": "该行总价 t_order_detail.total_price" },
+                  "Morder_no": { "type": "string", "description": "订单号 t_order_detail.Morder_no；服务端写入，新建勿传" },
+                  "Morder_num": { "type": "integer", "description": "下单批次 t_order_detail.Morder_num；服务端写入，新建勿传" },
+                  "order_rece": { "type": "string", "description": "接单状态 t_order_detail.order_rece，如 mis_order/rec_order；服务端写入，新建勿传" },
+                  "remark": { "type": "string", "description": "行备注 t_order_detail.remark" },
+                  "selectedSpicy": { "type": "string", "description": "口味/规格等 JSON 字符串 t_order_detail.selectedSpicy，如 {\"辣度\":\"微辣\"}" },
+                  "cid": { "type": "string", "description": "分类/业务侧菜品标识 t_order_detail.cid" }
+                },
+                "required": ["name", "quantity", "total_price", "cid"]
+              }
+            }
+          },
+          "required": ["openid", "dineInOrTakeOut", "number_of_diners", "goods_list", "table_number"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "add_dishes",
+        "description": "POST /order/addDishes：已有订单加菜",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "order_no": { "type": "string", "description": "主订单号" },
+            "table_number": { "type": "string", "description": "桌号" },
+            "sett_amount": { "type": "number", "description": "加菜后订单原价（不含服务费）" },
+            "remark": { "type": "string", "description": "加菜备注（可选）" },
+            "goods_list": {
+              "type": "array",
+              "description": "加菜明细，对应表 t_order_detail；带「服务端写入」的字段加菜请求勿传",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer", "description": "明细主键 t_order_detail.id；加菜新建行勿传" },
+                  "mId": { "type": "integer", "description": "订单主表ID t_order_detail.mId；加菜时服务端写入，勿传" },
+                  "name": { "type": "string", "description": "菜品名称 t_order_detail.name" },
+                  "quantity": { "type": "string", "description": "数量 t_order_detail.quantity" },
+                  "unit": { "type": "string", "description": "单位 t_order_detail.unit" },
+                  "image": { "type": "string", "description": "菜品图片 t_order_detail.image，可选" },
+                  "total_price": { "type": "number", "description": "该行总价 t_order_detail.total_price" },
+                  "Morder_no": { "type": "string", "description": "订单号 t_order_detail.Morder_no；服务端写入，勿传" },
+                  "Morder_num": { "type": "integer", "description": "下单批次 t_order_detail.Morder_num；服务端写入，勿传" },
+                  "order_rece": { "type": "string", "description": "接单状态 t_order_detail.order_rece；服务端写入，勿传" },
+                  "remark": { "type": "string", "description": "行备注 t_order_detail.remark" },
+                  "selectedSpicy": { "type": "string", "description": "口味JSON字符串 t_order_detail.selectedSpicy" },
+                  "cid": { "type": "string", "description": "分类/业务标识 t_order_detail.cid" }
+                },
+                "required": ["name", "quantity", "total_price", "cid"]
+              }
+            }
+          },
+          "required": ["order_no", "table_number", "goods_list"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_order_by_table",
+        "description": "GET /order/get：按桌号 + 交易状态查当前订单",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "table_number": { "type": "string", "description": "桌号" },
+            "transac_status": { "type": "string", "enum": ["success", "unsettled", "cancelled"], "description": "交易状态" }
+          },
+          "required": ["table_number", "transac_status"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "query_order",
+        "description": "GET /order/getOrder：按订单号查单及明细；外卖单额外含 delivery（地址、配送费、dispatch_status 等），非外卖 delivery 为 null",
+        "parameters": {
+          "type": "object",
+          "properties": { "order_no": { "type": "string", "description": "订单号" } },
+          "required": ["order_no"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "order_history",
+        "description": "POST /order/history：用户历史订单分页",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid" },
+            "page": { "type": "integer", "description": "页码，从1开始" },
+            "pageSize": { "type": "integer", "description": "每页条数" },
+            "status": { "type": "string", "description": "订单状态筛选：all/unsettled/success/cancelled" }
+          },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "cancel_order",
+        "description": "POST /order/cancel：取消未支付订单",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "order_no": { "type": "string", "description": "订单号" },
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid（用于归属校验）" }
+          },
+          "required": ["order_no", "openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "order_notice",
+        "description": "POST /order/notice：取餐/通知标识写回订单",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "order_no": { "type": "string", "description": "订单号" },
+            "notice": { "type": "integer", "description": "如 1 表示已通知" }
+          },
+          "required": ["order_no"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "order_print_content",
+        "description": "GET /order/printContent：生成打印内容并尝试下发打印机（店员场景，慎用）",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "orderId": { "type": "integer", "description": "t_order.id" },
+            "type": { "type": "boolean", "description": "可选，默认 false", "default": false }
+          },
+          "required": ["orderId"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "order_auto_accept_and_print",
+        "description": "POST /order/autoAcceptAndPrint：自动接单并打印（店员/厨房场景，慎用）",
+        "parameters": {
+          "type": "object",
+          "properties": { "orderId": { "type": "integer", "description": "t_order.id" } },
+          "required": ["orderId"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_table_info",
+        "description": "GET /order/table-info/{tableNumber}：台号维度订单摘要",
+        "parameters": {
+          "type": "object",
+          "properties": { "tableNumber": { "type": "string", "description": "桌号（驼峰格式）" } },
+          "required": ["tableNumber"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_prepay_id",
+        "description": "POST /order/getPrepayId：微信预支付 prepay_id 与 payParams",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "orderNo": { "type": "string", "description": "订单号（驼峰字段）" },
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid" },
+            "takeOut": { "type": "string", "description": "就餐方式（堂食/打包）" },
+            "totalAmount": { "type": "string", "description": "支付总金额（元）" },
+            "coupon_id": { "type": "string", "description": "优惠券ID（可选）" },
+            "discount_amount": { "type": "string", "description": "优惠金额（可选）" }
+          },
+          "required": ["orderNo", "openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "close_pay",
+        "description": "POST /order/closePay：用户取消支付弹窗时关微信未支付单",
+        "parameters": {
+          "type": "object",
+          "properties": { "orderNo": { "type": "string", "description": "订单号（驼峰字段）" } },
+          "required": ["orderNo"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "query_pay_by_out_trade_no",
+        "description": "GET /order/queryByOutTradeNo/{outTradeNo}：按商户订单号查微信支付单",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "outTradeNo": { "type": "string", "description": "一般为 order_no" },
+            "merchantId": { "type": "string", "description": "多商户可选" }
+          },
+          "required": ["outTradeNo"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "send_subscribe",
+        "description": "POST /order/sendSubscribe：发送订阅消息",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "openid": { "type": "string", "description": "接收消息用户openid" },
+            "templateId": { "type": "string", "description": "微信订阅消息模板ID" },
+            "order_no": { "type": "string", "description": "订单号" },
+            "data": { "type": "object", "description": "微信模板数据键值" }
+          },
+          "required": ["openid", "templateId", "order_no", "data"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_banners",
+        "description": "GET /order/banners：首页轮播图",
+        "parameters": { "type": "object", "properties": {} }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_available_coupons",
+        "description": "POST /coupon/getAvailable：可领取优惠券列表",
+        "parameters": {
+          "type": "object",
+          "properties": { "openid": { "type": "string", "description": "用户微信唯一标识 openid" } },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "coupon_receive",
+        "description": "POST /coupon/receive：领取优惠券",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid" },
+            "coupon_id": { "type": "integer", "format": "int64", "description": "优惠券主键ID" }
+          },
+          "required": ["openid", "coupon_id"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "coupon_available_count",
+        "description": "POST /coupon/availableCount：用户可用未过期券数量",
+        "parameters": {
+          "type": "object",
+          "properties": { "openid": { "type": "string", "description": "用户微信唯一标识 openid" } },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_user_coupons",
+        "description": "POST /coupon/getUserCoupons：用户券列表按状态",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid" },
+            "status": { "type": "string", "description": "优惠券状态：0未使用/1已使用/2已失效/all全部" }
+          },
+          "required": ["openid", "status"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "get_activity_popup_list",
+        "description": "POST /activity/popupList：活动弹窗",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "openid": { "type": "string", "description": "用户微信唯一标识 openid（可选）" },
+            "type": { "type": "string", "description": "默认 page_activity" }
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "invite_get_code",
+        "description": "POST /invite/getCode：用户邀请码",
+        "parameters": {
+          "type": "object",
+          "properties": { "openid": { "type": "string", "description": "用户微信唯一标识 openid" } },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "invite_get_records",
+        "description": "POST /invite/getRecords：邀请记录",
+        "parameters": {
+          "type": "object",
+          "properties": { "openid": { "type": "string", "description": "用户微信唯一标识 openid" } },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "invite_get_reward",
+        "description": "GET|POST /invite/getReward：奖励列表（注册礼+首单返现，可拆行；reward_row_uid、reward_type=first_order_balance）",
+        "parameters": {
+          "type": "object",
+          "properties": { "openid": { "type": "string", "description": "用户微信唯一标识 openid" } },
+          "required": ["openid"]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "invite_poster",
+        "description": "GET /invite/poster：按邀请码生成海报（返回 posterUrl，可能为较大 Base64）",
+        "parameters": {
+          "type": "object",
+          "properties": { "code": { "type": "string", "description": "邀请码" } },
+          "required": ["code"]
+        }
+      }
+    }
+  ]
+}

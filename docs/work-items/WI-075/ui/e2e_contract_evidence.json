@@ -1,0 +1,57 @@
+{
+  "workItem": "WI-075",
+  "verifiedAt": "2026-10-29T08:20:00+08:00",
+  "verificationDecision": "VERIFIED",
+  "interactions": [
+    {
+      "interactionId": "INT-001",
+      "description": "财务工作台拉取开票申请分页列表",
+      "classification": "AVAILABLE",
+      "endpoint": "GET /admin/order/invoice/list",
+      "testMethod": "AdminOrderAuditAndInvoiceApiTest#listInvoices_success, OrderInvoiceServiceTest#pageInvoiceForAdmin_statusFilter",
+      "testResult": "PASS",
+      "securityEnforcement": "Requires admin token and resolved shop_id multi-tenant isolation"
+    },
+    {
+      "interactionId": "INT-002",
+      "description": "一键复制税号/抬头到剪贴板",
+      "classification": "DERIVABLE",
+      "clientVerification": "navigator.clipboard.writeText with fallback textarea selection, toast notification on success",
+      "testResult": "PASS"
+    },
+    {
+      "interactionId": "INT-003",
+      "description": "财务弹窗确认开票并录入发票号",
+      "classification": "AVAILABLE",
+      "endpoint": "POST /admin/order/invoice/issue",
+      "testMethod": "OrderInvoiceServiceTest#issueInvoice_withoutFapiaoUrl_succeedsForOfflineManualIssuing",
+      "testResult": "PASS",
+      "securityEnforcement": "Requires valid invoice_id, updates status to ISSUED, records operator_id and issue_time"
+    },
+    {
+      "interactionId": "INT-004",
+      "description": "财务弹窗驳回开票申请并填写原因",
+      "classification": "AVAILABLE",
+      "endpoint": "POST /admin/order/invoice/reject",
+      "testMethod": "AdminOrderAuditAndInvoiceApiTest#rejectInvoice_success, OrderInvoiceServiceTest#rejectInvoice_success",
+      "testResult": "PASS",
+      "securityEnforcement": "Non-empty reason required, status transitions to REJECTED, records operator_id"
+    },
+    {
+      "interactionId": "INT-005",
+      "description": "顾客 H5 申请页面查看驳回原因并修改重提",
+      "classification": "AVAILABLE",
+      "endpoint": "GET /api/invoice/info and POST /api/invoice/submit",
+      "testMethod": "OrderInvoiceServiceTest#submitInvoiceTitle_resubmitAfterRejection_resetsStatusAndClearsError",
+      "testResult": "PASS",
+      "securityEnforcement": "Requires valid token, resets status to TITLE_SUBMITTED, clears error_msg"
+    },
+    {
+      "interactionId": "INT-006",
+      "description": "状态过滤 Tab 切换与关键字过滤",
+      "classification": "DERIVABLE",
+      "clientVerification": "switchTab updates active tab state and calls loadInvoices(1) with status parameter; search input bound to keyword query",
+      "testResult": "PASS"
+    }
+  ]
+}
