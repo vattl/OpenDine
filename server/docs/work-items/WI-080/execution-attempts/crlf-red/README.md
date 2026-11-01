@@ -1,0 +1,1 @@
+Initial observed RED archived because checkout CRLF bytes differed from Git LF baseline before any production edit. Original journal and logs retained verbatim; relative log paths refer to the original Work Item location. Authoritative cycle reruns the original Compose at exact Git baseline bytes.

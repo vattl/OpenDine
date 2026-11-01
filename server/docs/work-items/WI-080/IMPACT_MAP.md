@@ -11,7 +11,7 @@ Deployment onboarding: root README.md and deploy/. Bootstrap uses existing serve
 ## Layer Coverage
 | Surface | Classification | Evidence / change |
 |---|---|---|
-| Documentation | AFFECTED | README.md; new deploy/README.md; historical deployment guide notice |
+| Documentation | AFFECTED | README.md; new server/docs/DEPLOYMENT.md; historical deployment guide notice |
 | Configuration | AFFECTED | deploy/docker-compose.yml, Dockerfile, environment example, nginx private path protection, root ignore |
 | Data/bootstrap | AFFECTED | deploy/sql/init.sql, new FreshInstallBootstrap CLI, existing migrations read/reused |
 | Security | AFFECTED | operator supplied admin password, independent runtime secrets, nonempty DB refusal |

@@ -4,7 +4,7 @@
 ## Type
 CHANGE
 ## State
-DESIGN
+INTEGRATED
 ## Requirement Contract
 ### Goal
 Make OpenDine onboarding accurate and executable for a fresh installation.
@@ -15,11 +15,11 @@ Merchant-facing README linked to complete deployment guide; safe explicit empty-
 ### Must preserve
 No production data/keys accessed; existing database never silently initialized; KDS cloud authority; existing HTTP contracts and client UI.
 ### Acceptance criteria
-- [ ] AC1 README states merchant problems, actual modules and third-party limitations without unsupported guarantees.
-- [ ] AC2 Guide covers prerequisites, build, env purpose/injection, new DB, admin, clients, verification, upgrades and backups.
-- [ ] AC3 Fresh bootstrap initializes current schema/RBAC and operator-selected BCrypt admin; nonempty DB rejected.
-- [ ] AC4 Compose supplies required secrets, keeps DB/Redis private and payment keys outside public uploads.
-- [ ] AC5 Automated checks and isolated MySQL startup/login evidence establish supported startup path; unavailable platforms stated truthfully.
+- [x] AC1 README states merchant problems, actual modules and third-party limitations without unsupported guarantees.
+- [x] AC2 Guide covers prerequisites, build, env purpose/injection, new DB, admin, clients, verification, upgrades and backups.
+- [x] AC3 Fresh bootstrap initializes current schema/RBAC and operator-selected BCrypt admin; nonempty DB rejected.
+- [x] AC4 Compose supplies required secrets, keeps DB/Redis private and payment keys outside public uploads.
+- [x] AC5 Automated checks and isolated MySQL startup/login evidence establish supported startup path; unavailable platforms stated truthfully.
 ### Open product questions
 NONE. Built-in audit provider selected by user on 2026-10-31.
 ## Impact Summary
@@ -27,11 +27,11 @@ IMPACT_MAP.md
 ## Design Summary
 IMPLEMENTATION_DESIGN.md
 ## Tasks / Vertical Slices
-- [ ] T01 Fresh deployment bootstrap, configuration and user documentation.
+- [x] T01 Fresh deployment bootstrap, configuration and user documentation.
 ## Acceptance Decision
-PENDING
+ACCEPTED
 ## Business Invariants
 Cloud is sole KDS authority; passwords BCrypt; no example secret becomes live default; no existing business DB mutated.
 ## Integration / Release
-NOT_INTEGRATED / NOT_RELEASED
+INTEGRATED / NOT_RELEASED
 

@@ -10,3 +10,6 @@ Observed RED for missing deployment prerequisites/bootstrap protections; GREEN a
 ## Scope / Constraints
 No client or API change. SQL migrations remain immutable. Do not disable readiness validators to get a green startup. No arbitrary execution of historical example SQL without schema checks. All runtime experiments use local generated test credentials, never printed.
 
+
+## Fresh Baseline Normalization
+The schema-only snapshot already contained V021 member recharge columns/indexes, V033 refund binding columns/indexes and order/merchant indexes, and V037 approval binding_version, without their complete companion schemas. Remove these fragments ONLY from deploy/sql/init.sql so the original immutable migrations execute in full and restore them; never suppress duplicate-column/index errors. This baseline is exclusively for an empty database, never an upgrade.
