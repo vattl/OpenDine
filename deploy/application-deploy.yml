@@ -1,0 +1,16 @@
+# Loaded explicitly by Compose; same file can be used for native deployment.
+qrcodeImgsFilePath: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/qrcode/
+dishImgsFilePath: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/dish/
+avatarImgsFilePath: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/avatar/
+activateImgsFilePath: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/advertising/
+ImgsFilePath: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/images/
+offlineCollectImgsFilePath: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/offline-collect/
+appPackagesFilePath: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/packages/
+invite:
+  poster:
+    background:
+      path: ${OPENDINE_PUBLIC_DIR:/var/lib/opendine/public}/poster/bg/invite-bg.jpg
+payment:
+  private-key-upload-dir: ${PAYMENT_PRIVATE_KEY_UPLOAD_DIR:/var/lib/opendine/private/payment-keys}
+stock-prep-forecast:
+  weather-enabled: ${STOCK_PREP_FORECAST_WEATHER_ENABLED:false}

@@ -1,0 +1,17 @@
+**/.git
+**/.env
+**/.env.*
+**/.local
+**/.ai-runtime
+**/target
+**/node_modules
+**/build
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.key
+**/*.log
+admin_panel
+kds_app
+miniprogram
+packages

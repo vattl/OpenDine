@@ -1,72 +1,119 @@
-version: '3.8'
+name: opendine
+
+x-server-image: &server-image
+  image: opendine-server:local
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile
 
 services:
   opendine-mysql:
-    image: mysql:8.0
-    container_name: opendine-mysql
-    restart: always
+    image: mysql:8.0@sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set a unique MySQL root password}
       MYSQL_DATABASE: db_diancan
+      MYSQL_USER: opendine
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set a unique application database password}
       TZ: Asia/Shanghai
-    command:
-      --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_general_ci
-      --explicit_defaults_for_timestamp=true
-    ports:
-      - "3306:3306"
+    command: [--character-set-server=utf8mb4, --collation-server=utf8mb4_general_ci]
     volumes:
-      - ./data/mysql:/var/lib/mysql
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - mysql-data:/var/lib/mysql
+    networks: [data]
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test: [CMD-SHELL, 'MYSQL_PWD="$${MYSQL_PASSWORD}" mysql -h 127.0.0.1 -u "$${MYSQL_USER}" -D "$${MYSQL_DATABASE}" -e "SELECT 1" >/dev/null 2>&1']
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
 
   opendine-redis:
-    image: redis:7.0-alpine
-    container_name: opendine-redis
-    restart: always
-    command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
+    image: redis:7-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+    restart: unless-stopped
+    command: [redis-server, --appendonly, 'yes']
     volumes:
-      - ./data/redis:/data
+      - redis-data:/data
+    networks: [data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Run explicitly ONCE on an empty database; not part of normal up/restart.
+  bootstrap:
+    <<: *server-image
+    profiles: [tools]
+    depends_on:
+      opendine-mysql:
+        condition: service_healthy
+    networks: [data]
+    environment:
+      MIGRATION_JDBC_URL: jdbc:mysql://opendine-mysql:3306/db_diancan?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
+      MIGRATION_DB_USER: opendine
+      MIGRATION_DB_PASSWORD: ${DB_PASSWORD:?Set the application database password}
+      BOOTSTRAP_CONFIRM_EMPTY_DATABASE: 'YES'
+      BOOTSTRAP_REPOSITORY_ROOT: /bootstrap
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:?Choose the first administrator username}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:?Choose a unique 16-72 byte administrator password}
+      BOOTSTRAP_SHOP_NAME: ${BOOTSTRAP_SHOP_NAME:?Name the first shop}
+    entrypoint: [java, '-Dfile.encoding=UTF-8', '-Dloader.main=com.lanf.database.FreshInstallBootstrap', -cp, /app/app.jar, org.springframework.boot.loader.PropertiesLauncher]
 
   opendine-server:
-    image: openjdk:8-jre-alpine
-    container_name: opendine-server
-    restart: always
+    <<: *server-image
+    restart: unless-stopped
     depends_on:
       opendine-mysql:
         condition: service_healthy
       opendine-redis:
-        condition: service_started
+        condition: service_healthy
+    networks: [edge, data]
     environment:
       TZ: Asia/Shanghai
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/deployment.yml
       SPRING_DATASOURCE_URL: jdbc:mysql://opendine-mysql:3306/db_diancan?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_DATASOURCE_USERNAME: opendine
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?Set the application database password}
       SPRING_REDIS_HOST: opendine-redis
       SPRING_REDIS_PORT: 6379
-      APP_PUBLIC_BASE_URL: http://localhost:8080
-    ports:
-      - "8080:8080"
+      AUTH_JWT_CURRENT_SECRET: ${AUTH_JWT_CURRENT_SECRET:?Set a random JWT signing secret}
+      APPROVAL_TOKEN_ENVELOPE_KEY: ${APPROVAL_TOKEN_ENVELOPE_KEY:?Set an independent approval encryption secret}
+      PAYMENT_CONFIG_MASTER_KEY: ${PAYMENT_CONFIG_MASTER_KEY:?Set an independent payment configuration encryption secret}
+      PAYMENT_PRIVATE_KEY_UPLOAD_DIR: /var/lib/opendine/private/payment-keys
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:?Set the externally reachable service URL}
+      WEIXIN_APPID: ${WEIXIN_APPID:-}
+      WEIXIN_SECRET: ${WEIXIN_SECRET:-}
+      LLM_API_URL: ${LLM_API_URL:-https://api.deepseek.com/v1/chat/completions}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      AMAP_WEB_KEY: ${AMAP_WEB_KEY:-}
+      ZSQ_USERNAME: ${ZSQ_USERNAME:-}
+      ZSQ_PASSWORD: ${ZSQ_PASSWORD:-}
+      ZSQ_AUTO_API_ENABLED: ${ZSQ_AUTO_API_ENABLED:-false}
+      ZSQ_TAKEOUT_SYNC_ENABLED: ${ZSQ_TAKEOUT_SYNC_ENABLED:-false}
+      PERSONAL_COLLECT_WEBHOOK_SECRET: ${PERSONAL_COLLECT_WEBHOOK_SECRET:-}
     volumes:
-      - ../server/target/diancan-0.0.1-SNAPSHOT.jar:/app/app.jar:ro
-      - ./data/uploads:/www/wwwroot/upload
-    entrypoint: ["java", "-jar", "-Dfile.encoding=UTF-8", "/app/app.jar"]
+      - public-files:/var/lib/opendine/public
+      - payment-keys:/var/lib/opendine/private/payment-keys
 
   opendine-nginx:
-    image: nginx:alpine
-    container_name: opendine-nginx
-    restart: always
+    image: nginx:stable-alpine@sha256:0e52bd054126cdc040b1276c0af347aeb02a41b9cfe305d6094767ac30e97949
+    restart: unless-stopped
     depends_on:
       - opendine-server
     ports:
-      - "80:80"
+      - '${HTTP_BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-8080}:80'
+    networks: [edge]
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./data/uploads:/www/wwwroot/upload:ro
+      - public-files:/var/lib/opendine/public:ro
+
+volumes:
+  mysql-data:
+  redis-data:
+  public-files:
+  payment-keys:
+
+networks:
+  edge: {}
+  data:
+    internal: true

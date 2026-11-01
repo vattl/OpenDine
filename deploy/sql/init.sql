@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS db_diancan DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE db_diancan;
+-- FRESH INSTALL BASELINE ONLY. Import through FreshInstallBootstrap into an empty selected database.
+-- V021/V033/V037 fields are deliberately supplied by immutable migrations, not duplicated here.
 -- phpMyAdmin SQL Dump
 -- version 5.0.4
 -- https://www.phpmyadmin.net/
@@ -43,7 +43,6 @@ CREATE TABLE IF NOT EXISTS `t_access_approval` (
   `auth_method` varchar(30) NOT NULL COMMENT '授权认证方式: PASSWORD, PIN, SESSION',
   `status` varchar(20) NOT NULL DEFAULT 'APPROVED' COMMENT '状态: PENDING, APPROVED, CONSUMED, EXPIRED, REVOKED, REJECTED',
   `token_hash` char(64) NOT NULL COMMENT '短期授权Token的SHA-256哈希值',
-  `binding_version` int(11) NOT NULL DEFAULT 1 COMMENT '审批上下文绑定策略版本: 1兼容, 2严格',
   `token_value` varchar(512) DEFAULT NULL COMMENT '二维码审批令牌AES-GCM短期加密信封，禁止保存原始令牌',
   `max_amount` decimal(12,2) DEFAULT NULL COMMENT '授权允许的最大金额上限',
   `expires_at` datetime NOT NULL COMMENT 'Token有效截止时间',
@@ -1188,8 +1187,6 @@ CREATE TABLE `t_member_recharge` (
   `openid` varchar(64) NOT NULL,
   `order_no` varchar(64) DEFAULT NULL COMMENT '微信充值商户单号（与 t_order 无关）；后台渠道可为空',
   `shop_id` int(11) DEFAULT NULL,
-  `operator_id` int(11) DEFAULT NULL COMMENT '后台人工充值操作员ID',
-  `drawer_session_id` bigint(20) DEFAULT NULL COMMENT '后台人工充值归属钱箱会话ID',
   `channel` varchar(20) NOT NULL COMMENT 'wechat | admin',
   `status` varchar(20) NOT NULL DEFAULT 'pending' COMMENT 'pending|success|cancelled',
   `recharge_amount` decimal(12,2) NOT NULL COMMENT '充值本金（元）',
@@ -1547,10 +1544,6 @@ CREATE TABLE `t_payment_refund_request` (
   `idempotency_key` varchar(64) NOT NULL,
   `out_refund_no` varchar(64) NOT NULL,
   `requested_fen` int(11) NOT NULL,
-  `merchant_config_id` bigint(20) DEFAULT NULL COMMENT '发起退款时绑定的支付商户配置ID',
-  `merchant_config_version` int(11) DEFAULT NULL COMMENT '发起退款时绑定的支付商户配置版本',
-  `expected_transaction_id` varchar(64) DEFAULT NULL COMMENT '原微信支付交易号',
-  `expected_mch_id` varchar(32) DEFAULT NULL COMMENT '退款申请绑定的微信商户号',
   `applied_fen` int(11) NOT NULL DEFAULT '0',
   `status` varchar(24) NOT NULL DEFAULT 'REQUESTED',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -2300,7 +2293,9 @@ ALTER TABLE `t_category_shop`
 --
 ALTER TABLE `t_combo`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `uk_combo_dish` (`dish_id`);
+  ADD UNIQUE KEY `uk_combo_dish` (`dish_id`),
+  -- Preserve fk_combo_dish while V048 replaces the legacy unique index.
+  ADD KEY `idx_combo_dish_fk` (`dish_id`);
 
 --
 -- 表的索引 `t_combo_fixed_item`
@@ -2668,9 +2663,7 @@ ALTER TABLE `t_member_recharge`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uk_member_recharge_order_no` (`order_no`),
   ADD KEY `idx_member_recharge_openid_created` (`openid`,`created_at`),
-  ADD KEY `idx_member_recharge_user_created` (`user_id`,`created_at`),
-  ADD KEY `idx_recharge_drawer_status` (`drawer_session_id`,`status`),
-  ADD KEY `idx_recharge_shop_status_pay_time` (`shop_id`,`status`,`pay_time`);
+  ADD KEY `idx_member_recharge_user_created` (`user_id`,`created_at`);
 
 --
 -- 表的索引 `t_notification_delivery`
@@ -2704,7 +2697,6 @@ ALTER TABLE `t_operation_log`
 --
 ALTER TABLE `t_order`
   ADD PRIMARY KEY (`id`) USING BTREE,
-  ADD UNIQUE KEY `uk_order_order_no` (`order_no`) USING BTREE,
   ADD KEY `OP` (`openid`) USING BTREE,
   ADD KEY `idx_order_shop_time` (`shop_id`,`order_time`),
   ADD KEY `idx_order_shop_pay_time` (`shop_id`,`pay_time`),
@@ -2772,8 +2764,7 @@ ALTER TABLE `t_payment_capability`
 ALTER TABLE `t_payment_merchant_config`
   ADD PRIMARY KEY (`id`) USING BTREE,
   ADD UNIQUE KEY `uk_shop_channel_key` (`shop_id`,`channel`,`merchant_key`) USING BTREE,
-  ADD KEY `idx_shop_channel` (`shop_id`,`channel`) USING BTREE,
-  ADD KEY `idx_payment_merchant_notify_serial` (`channel`,`platform_pub_key_id`) USING BTREE;
+  ADD KEY `idx_shop_channel` (`shop_id`,`channel`) USING BTREE;
 
 --
 -- 表的索引 `t_payment_method`
@@ -2804,8 +2795,7 @@ ALTER TABLE `t_payment_refund_request`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uk_payment_refund_idempotency` (`shop_id`,`idempotency_key`),
   ADD UNIQUE KEY `uk_payment_refund_out_no` (`out_refund_no`),
-  ADD KEY `idx_payment_refund_order` (`shop_id`,`order_no`),
-  ADD KEY `idx_payment_refund_merchant_config` (`merchant_config_id`,`merchant_config_version`);
+  ADD KEY `idx_payment_refund_order` (`shop_id`,`order_no`);
 
 --
 -- 表的索引 `t_payment_test_txn`
@@ -3718,9 +3708,8 @@ ALTER TABLE `t_user_coupon`
   ADD CONSTRAINT `fk_user_coupon_coupon_id` FOREIGN KEY (`coupon_id`) REFERENCES `t_coupon` (`id`) ON DELETE CASCADE;
 
 --
--- 限制表 `t_user_last_shop`
---
-ALTER TABLE `t_user_last_shop`
+-- The historical export had an incomplete ALTER TABLE t_user_last_shop here.
+-- No constraint can be inferred from it; the table remains as declared above.
 -- --------------------------------------------------------
 --
 -- 表的结构 `t_payment_ledger` (不可变支付账本 POS-SDC-101)
@@ -3872,7 +3861,6 @@ CREATE TABLE IF NOT EXISTS `t_access_approval` (
   `auth_method` VARCHAR(30) NOT NULL COMMENT '授权认证方式: PASSWORD, PIN, SESSION',
   `status` VARCHAR(20) NOT NULL DEFAULT 'APPROVED' COMMENT '状态: PENDING, APPROVED, CONSUMED, EXPIRED, REVOKED, REJECTED',
   `token_hash` CHAR(64) NOT NULL COMMENT '短期授权Token的SHA-256哈希值',
-  `binding_version` INT NOT NULL DEFAULT 1 COMMENT '审批上下文绑定策略版本: 1兼容, 2严格',
   `token_value` VARCHAR(512) DEFAULT NULL COMMENT '二维码审批令牌AES-GCM短期加密信封，禁止保存原始令牌',
   `max_amount` DECIMAL(12,2) DEFAULT NULL COMMENT '授权允许的最大金额上限',
   `expires_at` DATETIME NOT NULL COMMENT 'Token有效截止时间',
