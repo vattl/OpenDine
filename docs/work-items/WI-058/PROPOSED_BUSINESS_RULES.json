@@ -1,0 +1,86 @@
+{
+  "schema": "ai-development-os/business-rules/v1",
+  "baseline_version": "PB-2",
+  "invariants": [
+    {
+      "id": "INV-PAY-001",
+      "status": "ENFORCED",
+      "capability": "external WeChat payment confirmation",
+      "owner": "PaymentSuccessHandler",
+      "rule": "Only a verified WeChat callback or authoritative query may confirm an external WeChat payment.",
+      "verification": "Payment callback/query signature tests and settlement integration tests"
+    },
+    {
+      "id": "INV-PAY-002",
+      "status": "ENFORCED",
+      "capability": "payment amount and merchant routing",
+      "owner": "PaymentSettlementService",
+      "rule": "Payable amount and merchant/shop scope are server-owned and must not be trusted from a client.",
+      "verification": "Server-side payable amount and multi-shop merchant binding tests"
+    },
+    {
+      "id": "INV-PAY-003",
+      "status": "ENFORCED",
+      "capability": "payment/refund accounting application",
+      "owner": "PaymentSuccessHandler / refund ledger services",
+      "rule": "Payment and refund success application is idempotent and must produce immutable accounting evidence.",
+      "verification": "Duplicate callback/refund tests and ledger consistency checks"
+    },
+    {
+      "id": "INV-KDS-001",
+      "status": "ENFORCED",
+      "capability": "KDS business authority",
+      "owner": "com.lanf.kds",
+      "rule": "Cloud is the sole KDS business authority; cashier is proxy/cache only.",
+      "verification": "KDS authority-mode, command-contract and legacy-write fail-closed tests"
+    },
+    {
+      "id": "INV-ORDER-001",
+      "status": "ENFORCED",
+      "capability": "order lifecycle",
+      "owner": "OrderController / order application services",
+      "rule": "Adding dishes must preserve the original order creation time.",
+      "verification": "Add-dish regression tests assert order_time is unchanged"
+    },
+    {
+      "id": "INV-ORDER-002",
+      "status": "TARGET",
+      "capability": "order mutation concurrency",
+      "owner": "order command layer",
+      "rule": "Every successful business mutation of an order must monotonically increase its revision.",
+      "verification": "Concurrent command and stale expectedVersion tests"
+    },
+    {
+      "id": "INV-PRICE-001",
+      "status": "TARGET",
+      "capability": "order pricing",
+      "owner": "OrderPricingService (target) / current pricing owners",
+      "rule": "Final payable amount is produced by server-owned pricing rules and never by a client-provided total.",
+      "verification": "Price tampering, quote and settlement parity tests"
+    },
+    {
+      "id": "INV-TABLE-001",
+      "status": "ENFORCED",
+      "capability": "table outstanding amount",
+      "owner": "TableStatusAmountCalculator",
+      "rule": "A table outstanding amount equals the sum of authoritative net payable amounts of all unsettled orders for the same shop and table.",
+      "verification": "Table/order amount parity tests covering add dish, merge, discount and refund"
+    },
+    {
+      "id": "INV-COMBO-001",
+      "status": "ENFORCED",
+      "capability": "combo ordering and pricing",
+      "owner": "ComboMealServiceImpl / order detail persistence",
+      "rule": "A combo header carries the price; component lines are persisted for traceability and must not be priced again.",
+      "verification": "Combo expansion, parent linkage and no-double-charge tests"
+    },
+    {
+      "id": "INV-APPROVAL-001",
+      "status": "TARGET",
+      "capability": "sensitive-operation approval",
+      "owner": "ApprovalService",
+      "rule": "An approval token is bound to exactly one action, resource, amount, operator and shop and can be consumed only once.",
+      "verification": "Binding mismatch, expiry and concurrent single-consumption tests"
+    }
+  ]
+}

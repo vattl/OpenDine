@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>门店日结 · 时序修复原型</title>
+  <style>
+    :root{--bg:#f4f4f2;--surface:#fff;--ink:#1c1917;--ink2:#57534e;--muted:#a8a29e;--line:#e4e4e0;--brand:#ea580c;--brandSoft:#fff1e6;--ok:#166534;--okSoft:#ecfdf3;--danger:#b91c1c;--dangerSoft:#fef2f2}
+    *{box-sizing:border-box}body{margin:0;background:#dededb;color:var(--ink);font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.55}.phone{width:min(100%,390px);min-height:844px;margin:0;background:var(--bg);box-shadow:0 0 28px rgba(28,25,23,.16)}
+    header{height:56px;background:var(--surface);display:flex;align-items:center;padding:0 14px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}.back{width:44px;height:44px;border:0;background:none;display:grid;place-items:center;margin-left:-10px}.back svg{width:22px}.title{font-size:18px;font-weight:700}.refresh{margin-left:auto;width:44px;height:44px;border:0;background:none;color:var(--ink2);display:grid;place-items:center}.refresh svg{width:20px}
+    main{padding:12px 14px 28px}.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px}.eyebrow{display:flex;align-items:center;gap:7px;color:var(--brand);font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 4px var(--brandSoft)}.date{font-size:26px;line-height:1.2;font-weight:750;letter-spacing:.2px;margin:7px 0 4px;font-variant-numeric:tabular-nums}.meta{font-size:12px;color:var(--ink2)}
+    .notice{margin-top:12px;padding:10px 11px;background:var(--brandSoft);border-radius:6px;color:#9a3412;font-size:12px}.notice strong{font-weight:750}.sequence{display:grid;grid-template-columns:1fr 34px 1fr;align-items:start;margin-top:14px}.node{text-align:center}.node-mark{width:28px;height:28px;margin:0 auto 5px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:750}.node.active .node-mark{background:var(--brand);color:#fff}.node.locked .node-mark{background:#eeeeda;color:var(--muted);border:1px solid var(--line)}.node-date{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}.node-state{font-size:11px;color:var(--ink2)}.connector{height:2px;background:var(--line);margin-top:13px}
+    .section-title{font-size:14px;font-weight:750;margin-bottom:10px}.ready{display:flex;gap:9px;align-items:flex-start}.ready-icon{width:22px;height:22px;border-radius:50%;background:var(--okSoft);color:var(--ok);display:grid;place-items:center;flex:none}.ready-icon svg{width:14px}.ready-title{font-weight:700;color:var(--ok)}.ready-sub{font-size:12px;color:var(--ink2);margin-top:1px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stat{padding:12px;background:#fafaf9;border:1px solid var(--line);border-radius:8px}.stat.primary{grid-column:1/-1;background:var(--brandSoft);border-color:#fed7aa}.label{font-size:12px;color:var(--ink2)}.value{font-size:20px;font-weight:750;margin-top:3px;font-variant-numeric:tabular-nums}.stat.primary .value{font-size:24px;color:#9a3412}.split{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}.split:last-child{border-bottom:0}.split strong{font-variant-numeric:tabular-nums}
+    .action{width:100%;height:48px;border:0;border-radius:6px;background:var(--danger);color:#fff;font-size:15px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 2px 5px rgba(185,28,28,.16)}.action:active{opacity:.85}.action svg{width:18px}.foot{font-size:11px;color:var(--ink2);text-align:center;margin:10px 8px 0}.dialog-mask{display:none;position:fixed;inset:0;background:rgba(28,25,23,.4);z-index:5;align-items:center;justify-content:center;padding:22px}.dialog-mask.open{display:flex}.dialog{width:min(100%,340px);background:#fff;border-radius:10px;padding:18px}.dialog h2{font-size:18px;margin:0 0 8px}.dialog p{margin:0 0 15px;color:var(--ink2)}.dialog .warn{padding:10px;background:var(--dangerSoft);color:#991b1b;border-radius:6px;font-size:12px}.dialog-actions{display:flex;gap:8px;margin-top:18px}.dialog-actions button{height:44px;flex:1;border-radius:6px;font-weight:700}.cancel{background:#fff;border:1px solid var(--line);color:var(--ink2)}.confirm{border:0;background:var(--danger);color:#fff}@media(max-width:500px){.phone{margin:0}}@media(max-width:340px){main{padding-left:10px;padding-right:10px}.date{font-size:23px}.sequence{grid-template-columns:1fr 24px 1fr}}
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header>
+      <button class="back" aria-label="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div class="title">门店日结</div>
+      <button class="refresh" aria-label="刷新" onclick="this.animate([{transform:'rotate(0)'},{transform:'rotate(360deg)'}],{duration:500})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.34 5.66M20 4v7h-7"/></svg></button>
+    </header>
+    <main>
+      <section class="card" aria-labelledby="date-title">
+        <div class="eyebrow"><span class="dot"></span><span>最早待日结营业日</span></div>
+        <div class="date" id="date-title">2026-10-24</div>
+        <div class="meta">营业时段 10-24 04:00 — 10-25 04:00 · 服务端权威日期</div>
+        <div class="notice"><strong>还有 2 个营业日待处理。</strong> 必须先完成 10月24日，完成后自动进入 10月25日。</div>
+        <div class="sequence" aria-label="日结顺序">
+          <div class="node active"><div class="node-mark">1</div><div class="node-date">10月24日</div><div class="node-state">当前待结</div></div>
+          <div class="connector"></div>
+          <div class="node locked"><div class="node-mark"><svg width="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div><div class="node-date">10月25日</div><div class="node-state">完成前一日后解锁</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="ready"><div class="ready-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 4 4L19 6"/></svg></div><div><div class="ready-title">预检通过，可以日结</div><div class="ready-sub">无未结订单、未关钱箱或待确认资金流水</div></div></div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">10月24日经营汇总</div>
+        <div class="grid">
+          <div class="stat primary"><div class="label">净销售额</div><div class="value">¥6,420.00</div></div>
+          <div class="stat"><div class="label">订单数</div><div class="value">86</div></div>
+          <div class="stat"><div class="label">实际收款</div><div class="value">¥6,580</div></div>
+        </div>
+        <div style="margin-top:8px">
+          <div class="split"><span>优惠金额</span><strong>¥128.00</strong></div>
+          <div class="split"><span>退款金额</span><strong>¥32.00</strong></div>
+          <div class="split"><span>现金长短款</span><strong>¥0.00</strong></div>
+        </div>
+      </section>
+
+      <button class="action" onclick="document.getElementById('confirm').classList.add('open')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l3 3v17H6z"/><path d="M9 11h6M9 15h6"/></svg>结算 10月24日</button>
+      <div class="foot">日结严格按营业日顺序推进，不支持跳过或强制绕过更早未结日期。</div>
+    </main>
+  </div>
+  <div class="dialog-mask" id="confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="dialog"><h2 id="confirm-title">确认日结 10月24日</h2><p>将固化该营业日的财务快照。完成后，日结中心才会进入 10月25日。</p><div class="warn">此操作不可跳过顺序；请确认经营汇总与预检结果无误。</div><div class="dialog-actions"><button class="cancel" onclick="document.getElementById('confirm').classList.remove('open')">取消</button><button class="confirm">确认日结</button></div></div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+{
+  "info": {
+    "name": "KDS 厨显联调",
+    "description": "厨显端 REST 示例。变量：baseUrl、shopId、deviceCode、screenTag、kdsToken。先执行「设备登录」再调其它接口。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://www.laofei.com.cn" },
+    { "key": "shopId", "value": "1" },
+    { "key": "deviceCode", "value": "KDS-MEAT-01" },
+    { "key": "screenTag", "value": "meat_grill" },
+    { "key": "kdsToken", "value": "" },
+    { "key": "orderId", "value": "1" },
+    { "key": "detailId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "设备登录",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"shop_id\": {{shopId}},\n  \"device_code\": \"{{deviceCode}}\",\n  \"screen_tag\": \"{{screenTag}}\"\n}"
+        },
+        "url": "{{baseUrl}}/kds/device/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let j = {}; try { j = pm.response.json(); } catch (e) {}",
+              "if (j.device_token) pm.collectionVariables.set('kdsToken', j.device_token);",
+              "if (j.token) pm.collectionVariables.set('kdsToken', j.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "订单列表",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Kds-Device-Token", "value": "{{kdsToken}}" }],
+        "url": "{{baseUrl}}/kds/order/list?status=pending"
+      }
+    },
+    {
+      "name": "划菜 status=1",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Kds-Device-Token", "value": "{{kdsToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"detail_id\": {{detailId}},\n  \"status\": 1,\n  \"screen_tag\": \"{{screenTag}}\"\n}"
+        },
+        "url": "{{baseUrl}}/kds/item/status"
+      }
+    },
+    {
+      "name": "缺货上报",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Kds-Device-Token", "value": "{{kdsToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"detail_id\": {{detailId}},\n  \"remark\": \"缺货\"\n}"
+        },
+        "url": "{{baseUrl}}/kds/item/lack"
+      }
+    },
+    {
+      "name": "今日统计",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "X-Kds-Device-Token", "value": "{{kdsToken}}" }],
+        "url": "{{baseUrl}}/kds/stats/today"
+      }
+    },
+    {
+      "name": "Admin 五屏初始化",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminJwt}}" },
+          { "key": "X-Shop-Id", "value": "{{shopId}}" }
+        ],
+        "url": "{{baseUrl}}/admin/kds/station/init-five"
+      }
+    }
+  ]
+}

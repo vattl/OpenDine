@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phase 2 小程序全域实时消息与弹窗编排中心 (UnifiedMessageCenter) 交互原型</title>
+  <style>
+    :root {
+      --brand-primary: #E53935;
+      --brand-gold: #FFB300;
+      --brand-green: #10B981;
+      --bg-page: #0F172A;
+      --phone-bg: #F7F8FA;
+      --text-main: #1F2937;
+      --text-sub: #6B7280;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg-page);
+      color: #F8FAFC;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+    }
+    .header-bar {
+      max-width: 1180px;
+      width: 100%;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      padding-bottom: 14px;
+    }
+    .header-title h1 { font-size: 19px; font-weight: 700; color: #FFFFFF; }
+    .header-title p { font-size: 12px; color: #94A3B8; margin-top: 4px; }
+    .badge-ws {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34D399;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .workspace {
+      max-width: 1180px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .workspace { grid-template-columns: 1fr; justify-items: center; }
+    }
+    .phone-shell {
+      width: 375px;
+      height: 770px;
+      background: var(--phone-bg);
+      border-radius: 40px;
+      border: 10px solid #1E293B;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      color: var(--text-main);
+    }
+    .status-bar {
+      height: 42px;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      font-size: 12px;
+      font-weight: 600;
+      border-bottom: 1px solid #F1F5F9;
+      z-index: 10;
+    }
+    .mp-capsule {
+      border: 1px solid #E2E8F0;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 11px;
+      color: #334155;
+      background: #F8FAFC;
+    }
+    .scene-switch {
+      display: flex;
+      background: #FFFFFF;
+      padding: 7px 10px;
+      gap: 8px;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .scene-tab {
+      flex: 1;
+      text-align: center;
+      padding: 6px 8px;
+      font-size: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #F1F5F9;
+      color: #475569;
+      font-weight: 600;
+      border: none;
+    }
+    .scene-tab.active { background: #FEE2E2; color: #DC2626; }
+    .notice-bar {
+      background: #FFFBEB;
+      border-bottom: 1px solid #FDE68A;
+      color: #B45309;
+      padding: 7px 12px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s;
+    }
+    .notice-bar.flash {
+      background: #FEF3C7;
+      box-shadow: inset 0 0 0 1px #F59E0B;
+    }
+    .queue-mutex-bar {
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 6px 12px;
+      font-size: 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .queue-pill {
+      background: #334155;
+      color: #38BDF8;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 10px;
+    }
+    .page-body { flex: 1; overflow-y: auto; padding: 12px; position: relative; }
+    .shop-banner {
+      background: linear-gradient(135deg, #1E293B, #334155);
+      color: #FFF;
+      border-radius: 14px;
+      padding: 13px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .shop-banner h3 { font-size: 15px; }
+    .shop-banner p { font-size: 11px; color: #CBD5E1; margin-top: 3px; }
+    .dish-card {
+      background: #FFF;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(15,23,42,0.04);
+      transition: all 0.25s;
+    }
+    .dish-card.soldout { opacity: 0.55; background: #F8FAFC; }
+    .dish-title { font-size: 14px; font-weight: 600; }
+    .dish-price { font-size: 14px; color: #DC2626; font-weight: 700; margin-top: 4px; }
+    .btn-add {
+      background: #DC2626;
+      color: #FFF;
+      border: none;
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .soldout-tag {
+      background: #E2E8F0;
+      color: #64748B;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .checkout-box {
+      background: #FFF;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .checkout-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #F1F5F9;
+      font-size: 13px;
+    }
+    .pay-btn {
+      margin-top: 16px;
+      width: 100%;
+      background: #07C160;
+      color: #FFF;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .pickup-top-banner {
+      position: absolute;
+      top: 112px;
+      left: 12px;
+      right: 12px;
+      background: linear-gradient(135deg, #059669, #10B981);
+      color: #FFF;
+      border-radius: 16px;
+      padding: 13px 14px;
+      box-shadow: 0 12px 28px rgba(16, 185, 129, 0.38);
+      z-index: 40;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .pickup-top-banner.queue-mode {
+      background: linear-gradient(135deg, #EA580C, #DC2626);
+      box-shadow: 0 12px 28px rgba(220, 38, 38, 0.4);
+    }
+    .pickup-top-banner.refund-mode {
+      background: linear-gradient(135deg, #2563EB, #1D4ED8);
+      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.35);
+    }
+    .pickup-top-banner.visible { display: flex; }
+    .pickup-code-badge {
+      background: rgba(255,255,255,0.22);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 800;
+      margin-right: 10px;
+    }
+    .pickup-info { flex: 1; }
+    .pickup-info h4 { font-size: 13px; font-weight: 700; }
+    .pickup-info p { font-size: 11px; opacity: 0.92; margin-top: 2px; }
+    .pickup-action {
+      background: #FFF;
+      color: #0F172A;
+      border: none;
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .suppress-capsule-banner {
+      position: absolute;
+      top: 112px;
+      left: 12px;
+      right: 12px;
+      background: linear-gradient(90deg, #FFFBEB, #FEF3C7);
+      border: 1px solid #F59E0B;
+      color: #92400E;
+      border-radius: 999px;
+      padding: 9px 14px;
+      box-shadow: 0 8px 20px rgba(245, 158, 11, 0.22);
+      z-index: 38;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .suppress-capsule-banner.visible { display: flex; }
+    .capsule-btn {
+      background: #D97706;
+      color: #FFF;
+      border: none;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.72);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.visible { display: flex; }
+    .coupon-modal {
+      width: 100%;
+      background: linear-gradient(180deg, #EF4444 0%, #B91C1C 100%);
+      border-radius: 24px;
+      padding: 20px 16px 16px;
+      color: #FFF;
+      text-align: center;
+      box-shadow: 0 20px 45px rgba(185, 28, 28, 0.5);
+      border: 2px solid #FCD34D;
+    }
+    .coupon-modal-tag {
+      display: inline-block;
+      background: #FDE68A;
+      color: #92400E;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 8px;
+    }
+    .coupon-modal h3 { font-size: 18px; font-weight: 800; }
+    .coupon-modal .sub { font-size: 12px; color: #FECACA; margin-top: 4px; margin-bottom: 12px; }
+    .coupon-ticket {
+      background: #FFF;
+      color: #1F2937;
+      border-radius: 14px;
+      padding: 11px 13px;
+      margin-bottom: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-align: left;
+    }
+    .ticket-amount { color: #DC2626; font-size: 22px; font-weight: 800; min-width: 72px; }
+    .ticket-amount small { font-size: 12px; }
+    .ticket-meta h5 { font-size: 13px; font-weight: 700; }
+    .ticket-meta p { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    .modal-cta {
+      width: 100%;
+      background: linear-gradient(90deg, #FDE047, #F59E0B);
+      color: #78350F;
+      border: none;
+      padding: 11px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .modal-close {
+      margin-top: 10px;
+      background: transparent;
+      color: #FEE2E2;
+      border: none;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .activity-poster-modal {
+      width: 100%;
+      text-align: center;
+    }
+    .poster-card {
+      background: linear-gradient(145deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
+      border-radius: 22px;
+      padding: 24px 18px;
+      color: #FFF;
+      box-shadow: 0 20px 50px rgba(124, 58, 237, 0.5);
+      border: 2px solid rgba(255,255,255,0.35);
+      position: relative;
+    }
+    .poster-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .poster-card h3 { font-size: 21px; font-weight: 800; line-height: 1.3; }
+    .poster-card p { font-size: 12px; opacity: 0.9; margin: 8px 0 18px; }
+    .poster-cta {
+      background: #FFF;
+      color: #6D28D9;
+      border: none;
+      border-radius: 999px;
+      padding: 11px 26px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .poster-dismiss {
+      margin-top: 14px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.7);
+      background: rgba(15, 23, 42, 0.5);
+      color: #FFF;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .expiring-snackbar {
+      position: absolute;
+      bottom: 60px;
+      left: 12px;
+      right: 12px;
+      background: #1E293B;
+      color: #F8FAFC;
+      border-radius: 12px;
+      padding: 10px 13px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
+      z-index: 35;
+    }
+    .expiring-snackbar.visible { display: flex; }
+    .snack-btn {
+      background: #EF4444;
+      color: #FFF;
+      border: none;
+      border-radius: 999px;
+      padding: 5px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .bottom-tabbar {
+      height: 50px;
+      background: #FFF;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      font-size: 11px;
+      color: #64748B;
+    }
+    .tab-item { position: relative; font-weight: 600; }
+    .tab-badge {
+      position: absolute;
+      top: -6px;
+      right: -14px;
+      background: #EF4444;
+      color: #FFF;
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 999px;
+    }
+    .control-panel {
+      background: #1E293B;
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .control-panel h2 { font-size: 16px; margin-bottom: 4px; }
+    .control-panel p.desc { font-size: 12px; color: #94A3B8; margin-bottom: 14px; }
+    .trigger-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .trigger-btn {
+      background: #334155;
+      color: #F8FAFC;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 10px 12px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.15s;
+    }
+    .trigger-btn:hover { border-color: #38BDF8; transform: translateY(-1px); }
+    .trigger-btn.highlight {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.32), rgba(236, 72, 153, 0.25));
+      border-color: rgba(167, 139, 250, 0.6);
+    }
+    .trigger-btn strong { display: block; font-size: 12.5px; margin-bottom: 3px; }
+    .trigger-btn span { font-size: 11px; color: #CBD5E1; line-height: 1.35; display: block; }
+    .log-box {
+      background: #0F172A;
+      border-radius: 12px;
+      padding: 12px;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 11.5px;
+      color: #38BDF8;
+      max-height: 230px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-bar">
+    <div class="header-title">
+      <h1>Phase 2：C端微信小程序全域消息与活动弹窗编排中心 (UnifiedMessageCenter) 交互原型</h1>
+      <p>统一管理：P0 取餐/排队叫号强提醒 · P1 天降优惠券弹窗/退款通知 · P2 活动海报弹窗(单模态互斥排队)/门店公告/临期券 · P3 菜品静默同步</p>
+    </div>
+    <div class="badge-ws">● WS `/ws/v1/notify` 已连接 (seq_id: <span id="seqCounter">108</span>)</div>
+  </div>
+
+  <div class="workspace">
+    <div class="phone-shell">
+      <div class="status-bar">
+        <span>09:41</span>
+        <span>老肥烧烤点餐小程序</span>
+        <span class="mp-capsule">••• ○</span>
+      </div>
+
+      <div class="scene-switch">
+        <button class="scene-tab active" id="tabMenu" onclick="switchScene('menu')">点餐首页 (常规态)</button>
+        <button class="scene-tab" id="tabCheckout" onclick="switchScene('checkout')">确认订单页 (支付防打扰态)</button>
+      </div>
+
+      <div class="notice-bar" id="shopNoticeBar">
+        <span id="shopNoticeText">📢 门店公告：营业时间 11:00-02:00，欢迎光临！</span>
+        <span style="font-size:10px;opacity:0.75;">实时广播</span>
+      </div>
+
+      <div class="queue-mutex-bar">
+        <span>单模态互斥锁: <strong id="mutexStateText" style="color:#34D399;">IDLE (空闲)</strong></span>
+        <span class="queue-pill">排队中 Modal: <span id="modalQueueCount">0</span></span>
+      </div>
+
+      <div class="pickup-top-banner" id="pickupBanner">
+        <div class="pickup-code-badge" id="pickupCodeText">#777</div>
+        <div class="pickup-info">
+          <h4 id="pickupTitleText">您的餐品已全部出餐！</h4>
+          <p id="pickupSubText">桌号 C05 · 请凭取餐号前往取餐口</p>
+        </div>
+        <button class="pickup-action" onclick="ackPickup()">知道了</button>
+      </div>
+
+      <div class="suppress-capsule-banner" id="suppressCapsule">
+        <span id="capsuleText">🎉 新到账 2 张优惠券可用（最高立减 ¥15）</span>
+        <button class="capsule-btn" onclick="applyCapsuleCoupon()">重选优惠</button>
+      </div>
+
+      <div class="page-body" id="sceneMenu">
+        <div class="shop-banner">
+          <div>
+            <h3>老肥烧烤（总店）</h3>
+            <p>营业中 · 桌号 A08 · 全域消息编排在线</p>
+          </div>
+          <span style="font-size:11px;background:rgba(16,185,129,0.25);padding:4px 8px;border-radius:6px;">堂食</span>
+        </div>
+
+        <div class="dish-card" id="dishCard99">
+          <div>
+            <div class="dish-title">招牌脆皮烤鸡</div>
+            <div class="dish-price">¥ 58.00</div>
+          </div>
+          <button class="btn-add" id="dishBtn99">+ 加入购物车</button>
+        </div>
+
+        <div class="dish-card">
+          <div>
+            <div class="dish-title">鲜烤安格斯牛肉串 (6串)</div>
+            <div class="dish-price">¥ 36.00</div>
+          </div>
+          <button class="btn-add">+ 加入购物车</button>
+        </div>
+
+        <div class="dish-card">
+          <div>
+            <div class="dish-title">锡纸蒜蓉粉丝扇贝</div>
+            <div class="dish-price">¥ 28.00</div>
+          </div>
+          <button class="btn-add">+ 加入购物车</button>
+        </div>
+      </div>
+
+      <div class="page-body" id="sceneCheckout" style="display:none;">
+        <div class="checkout-box">
+          <h4 style="margin-bottom:10px;">确认订单（敏感支付保护页）</h4>
+          <div class="checkout-row"><span>桌台号</span><strong>A08 桌</strong></div>
+          <div class="checkout-row"><span>商品小计</span><span>¥ 94.00</span></div>
+          <div class="checkout-row"><span>优惠券抵扣</span><strong style="color:#DC2626;" id="checkoutDiscount">- ¥ 0.00</strong></div>
+          <div class="checkout-row"><span>应付合计</span><strong style="font-size:16px;">¥ <span id="checkoutTotal">94.00</span></strong></div>
+          <button class="pay-btn">立即微信支付</button>
+          <p style="font-size:11px;color:#64748B;margin-top:10px;">
+            💡 处于结账页时：P1 优惠券弹窗自动降级为顶部胶囊横幅；P2 营销活动海报弹窗自动挂起，返回首页后再展示。
+          </p>
+        </div>
+      </div>
+
+      <div class="expiring-snackbar" id="expiringSnackbar">
+        <span>⏰ 您的【周末满50减15元券】将于 45 分钟后到期</span>
+        <button class="snack-btn" onclick="dismissExpiring()">去使用</button>
+      </div>
+
+      <div class="modal-backdrop" id="couponModal">
+        <div class="coupon-modal">
+          <span class="coupon-modal-tag" id="modalTag">实时到账 · P1</span>
+          <h3 id="modalTitle">恭喜获得专属优惠券</h3>
+          <p class="sub" id="modalSub">已自动放入您的卡包，下单直接抵扣</p>
+          <div id="modalTicketsContainer"></div>
+          <button class="modal-cta" onclick="closeActiveModal('COUPON', true)">立即去点餐使用</button>
+          <button class="modal-close" onclick="closeActiveModal('COUPON', false)">收下并关闭 (触发队列下一弹窗)</button>
+        </div>
+      </div>
+
+      <div class="modal-backdrop" id="activityPosterModal">
+        <div class="activity-poster-modal">
+          <div class="poster-card">
+            <span class="poster-badge">GlobalActivityPopup · P2 营销海报</span>
+            <h3 id="posterTitle">🔥 周末夜宵全场 8 折狂欢</h3>
+            <p id="posterDesc">精酿扎啤买一送一 · 进店即享多重好礼</p>
+            <button class="poster-cta" onclick="closeActiveModal('ACTIVITY_POSTER', true)">立即参与活动 →</button>
+          </div>
+          <button class="poster-dismiss" onclick="closeActiveModal('ACTIVITY_POSTER', false)">✕</button>
+        </div>
+      </div>
+
+      <div class="bottom-tabbar">
+        <div class="tab-item" style="color:#DC2626;">点餐</div>
+        <div class="tab-item">订单</div>
+        <div class="tab-item">我的优惠券 <span class="tab-badge" id="couponBadge">2</span></div>
+      </div>
+    </div>
+
+    <div class="control-panel">
+      <h2>全域消息与弹窗优先级编排仿真台</h2>
+      <p class="desc">点击下方按钮验证“活动海报弹窗、优惠券弹窗、排队叫号、门店公告、退款通知”在同一通道下的优先级互斥与编排：</p>
+
+      <div class="trigger-grid">
+        <button class="trigger-btn highlight" onclick="simulateCouponPlusActivityConflict()">
+          <strong>★ 1. 新客进店：优惠券(P1) + 活动海报(P2) 并发防撞</strong>
+          <span>同时到达时绝不双弹窗叠加：先弹 P1 优惠券，关闭后冷却 500ms 自动弹出 P2 活动海报</span>
+        </button>
+
+        <button class="trigger-btn highlight" onclick="simulateActivityPopupRealtime()">
+          <strong>★ 2. 后台新发布活动海报 (`ACTIVITY_POPUP_CHANGED` P2)</strong>
+          <span>立即失效客户端 3 分钟缓存，纳入单模态队列展示活动海报</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulateQueueTicketCalled()">
+          <strong>3. 排队叫号到号强提醒 (`QUEUE_TICKET_CALLED` P0)</strong>
+          <span>按顾客 `openid` 精准推送 `#A108` 到号置顶强提醒条 + 手机震动</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulateAnnouncementBroadcast()">
+          <strong>4. 门店公告实时广播 (`SHOP_ANNOUNCEMENT_CHANGED` P2)</strong>
+          <span>后台新增/修改门店公告，小程序顶部滚动通告栏实时刷新</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulateRefundProcessed()">
+          <strong>5. 订单退款结果通知 (`ORDER_REFUND_PROCESSED` P1)</strong>
+          <span>商家同意退款后，顾客端顶部弹出蓝色退款到账通知横幅</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulateBatchCoupons()">
+          <strong>6. 连续推送 3 张优惠券 (800ms 聚合防刷屏)</strong>
+          <span>验证 `aggregation_window_ms=800`：3 张券合并为 1 个礼盒弹窗</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulatePickupReady()">
+          <strong>7. KDS 出餐取餐强提醒 (`ORDER_READY_FOR_PICKUP` P0)</strong>
+          <span>顶部绿色醒目取餐号 `#777` 卡片 + 震动反馈</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulateCouponExpiring()">
+          <strong>8. 优惠券临期提醒 (`COUPON_EXPIRING_SOON` P2)</strong>
+          <span>底部非阻断悬浮 SnackBar 提示 45 分钟后到期</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulateDishSoldOut()">
+          <strong>9. 菜品估清静默同步 (`DISH_CATALOG_CHANGED` P3)</strong>
+          <span>静默将【招牌脆皮烤鸡】刷新为“已估清”</span>
+        </button>
+
+        <button class="trigger-btn" onclick="simulateReconnectSync()">
+          <strong>10. 断线重连游标补拉 (`GET /user/notifications/sync`)</strong>
+          <span>按 `last_seq_id` 增量拉取离线期间未读的 P0/P1 消息</span>
+        </button>
+      </div>
+
+      <h2 style="font-size:13px;margin-bottom:6px;">统一消息总线与单模态编排器日志</h2>
+      <div class="log-box" id="logBox">
+        [WS /ws/v1/notify] CONNECTED: client_type=MINI_PROGRAM, openid=openid_alice, server_head_seq_id=108
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentScene = 'menu';
+    let seqId = 108;
+    let couponCount = 2;
+
+    let activeModalType = null;
+    const modalQueue = [];
+
+    function updateMutexStatusUI() {
+      const stateEl = document.getElementById('mutexStateText');
+      const countEl = document.getElementById('modalQueueCount');
+      countEl.innerText = modalQueue.length;
+      if (activeModalType) {
+        stateEl.innerText = `LOCKED (${activeModalType})`;
+        stateEl.style.color = '#FBBF24';
+      } else {
+        stateEl.innerText = 'IDLE (空闲)';
+        stateEl.style.color = '#34D399';
+      }
+    }
+
+    function enqueueModal(priorityWeight, type, label, renderFn) {
+      if (currentScene === 'checkout' && type === 'ACTIVITY_POSTER') {
+        logLine(`[ModalOrchestrator] 结账页禁止弹出 P2 活动海报 (${label})，已挂起等待返回常规页`);
+        modalQueue.push({ priorityWeight, type, label, renderFn });
+        modalQueue.sort((a, b) => a.priorityWeight - b.priorityWeight);
+        updateMutexStatusUI();
+        return;
+      }
+      modalQueue.push({ priorityWeight, type, label, renderFn });
+      modalQueue.sort((a, b) => a.priorityWeight - b.priorityWeight);
+      logLine(`[ModalOrchestrator] 入队模态弹窗: ${label} (优先级权重=${priorityWeight}, 当前队列长度=${modalQueue.length})`);
+      drainModalQueue();
+    }
+
+    function drainModalQueue() {
+      updateMutexStatusUI();
+      if (activeModalType !== null || modalQueue.length === 0) {
+        return;
+      }
+      if (currentScene === 'checkout' && modalQueue[0].type === 'ACTIVITY_POSTER') {
+        return;
+      }
+      const next = modalQueue.shift();
+      activeModalType = next.type;
+      updateMutexStatusUI();
+      next.renderFn();
+    }
+
+    function closeActiveModal(type, ctaClicked) {
+      if (type === 'COUPON') {
+        document.getElementById('couponModal').classList.remove('visible');
+        logLine(`[ACK] POST /user/notifications/ack -> 优惠券弹窗已关闭并确认已读`);
+      } else if (type === 'ACTIVITY_POSTER') {
+        document.getElementById('activityPosterModal').classList.remove('visible');
+        logLine(`[GlobalActivityPopup] 活动海报弹窗已关闭，写入今日展示次数缓存`);
+      }
+      activeModalType = null;
+      updateMutexStatusUI();
+      if (modalQueue.length > 0) {
+        logLine(`[ModalOrchestrator] 500ms 呼吸冷却后自动弹出队列中下一个弹窗 (${modalQueue[0].label})...`);
+        setTimeout(() => {
+          drainModalQueue();
+        }, 500);
+      }
+    }
+
+    function logLine(text) {
+      const box = document.getElementById('logBox');
+      const time = new Date().toLocaleTimeString();
+      box.innerHTML = `[${time}] ${text}\n` + box.innerHTML;
+    }
+
+    function nextSeq() {
+      seqId += 1;
+      document.getElementById('seqCounter').innerText = seqId;
+      return seqId;
+    }
+
+    function switchScene(scene) {
+      currentScene = scene;
+      document.getElementById('tabMenu').classList.toggle('active', scene === 'menu');
+      document.getElementById('tabCheckout').classList.toggle('active', scene === 'checkout');
+      document.getElementById('sceneMenu').style.display = scene === 'menu' ? 'block' : 'none';
+      document.getElementById('sceneCheckout').style.display = scene === 'checkout' ? 'block' : 'none';
+      logLine(`[RouterContext] 切换页面至: ${scene === 'checkout' ? 'packageOther/confirm-order (支付防打扰态)' : 'pages/index/index (常规浏览态)'}`);
+      if (scene === 'menu') {
+        drainModalQueue();
+      }
+    }
+
+    function simulateCouponPlusActivityConflict() {
+      const s1 = nextSeq();
+      const s2 = nextSeq();
+      couponCount += 1;
+      document.getElementById('couponBadge').innerText = couponCount;
+      logLine(`[并发到达] 同时收到 P1 新人优惠券 (seq=${s1}) 与 P2 首页活动海报 GlobalActivityPopup (seq=${s2})`);
+
+      if (currentScene === 'checkout') {
+        document.getElementById('capsuleText').innerText = '🎉 新到账 1 张新人券（满30减10元），活动海报已挂起';
+        document.getElementById('suppressCapsule').classList.add('visible');
+      } else {
+        enqueueModal(1, 'COUPON', 'P1-新人专享优惠券弹窗', () => {
+          document.getElementById('modalTag').innerText = '优先级 P1 · 优先展示';
+          document.getElementById('modalTitle').innerText = '恭喜获得新人专享券';
+          document.getElementById('modalSub').innerText = 'P2 活动海报已在后台队列等待，绝不重叠遮挡';
+          document.getElementById('modalTicketsContainer').innerHTML = `
+            <div class="coupon-ticket">
+              <div class="ticket-amount"><small>¥</small>10</div>
+              <div class="ticket-meta">
+                <h5>新人满30减10元券</h5>
+                <p>满 30 元可用 · 关闭后 500ms 弹出活动海报</p>
+              </div>
+            </div>
+          `;
+          document.getElementById('couponModal').classList.add('visible');
+        });
+      }
+
+      enqueueModal(2, 'ACTIVITY_POSTER', 'P2-周末8折活动海报弹窗', () => {
+        document.getElementById('posterTitle').innerText = '🔥 周末夜宵全场 8 折狂欢';
+        document.getElementById('posterDesc').innerText = '由单模态队列在 P1 优惠券弹窗关闭 500ms 后自动唤醒展示';
+        document.getElementById('activityPosterModal').classList.add('visible');
+      });
+    }
+
+    function simulateActivityPopupRealtime() {
+      const s = nextSeq();
+      logLine(`[EVENT seq=${s}] ACTIVITY_POPUP_CHANGED (P2) action=ADDED -> 已清除本地 3 分钟缓存并入队展示`);
+      enqueueModal(2, 'ACTIVITY_POSTER', 'P2-后台实时发布活动海报', () => {
+        document.getElementById('posterTitle').innerText = '🍻 精酿扎啤买一送一专场';
+        document.getElementById('posterDesc').innerText = '运营后台刚刚发布 · 无需等待 3 分钟缓存过期立即触达';
+        document.getElementById('activityPosterModal').classList.add('visible');
+      });
+    }
+
+    function simulateQueueTicketCalled() {
+      const s = nextSeq();
+      const banner = document.getElementById('pickupBanner');
+      banner.className = 'pickup-top-banner queue-mode visible';
+      document.getElementById('pickupCodeText').innerText = 'A108';
+      document.getElementById('pickupTitleText').innerText = '排队到号提醒：请立即就餐！';
+      document.getElementById('pickupSubText').innerText = '四人桌 (堂食) · 请前往总店迎宾台核验入座';
+      logLine(`[EVENT seq=${s}] QUEUE_TICKET_CALLED (P0) ticket_no=A108 -> 置顶橙红强提醒卡片 + wx.vibrateLong()`);
+    }
+
+    function simulateAnnouncementBroadcast() {
+      const s = nextSeq();
+      const bar = document.getElementById('shopNoticeBar');
+      document.getElementById('shopNoticeText').innerText = '📢 最新公告：今日现熬冰镇酸梅汤堂食免费无限续杯！';
+      bar.classList.add('flash');
+      setTimeout(() => bar.classList.remove('flash'), 1800);
+      logLine(`[EVENT seq=${s}] SHOP_ANNOUNCEMENT_CHANGED (P2) -> 顶部通告栏实时无感更新`);
+    }
+
+    function simulateRefundProcessed() {
+      const s = nextSeq();
+      const banner = document.getElementById('pickupBanner');
+      banner.className = 'pickup-top-banner refund-mode visible';
+      document.getElementById('pickupCodeText').innerText = '退款';
+      document.getElementById('pickupTitleText').innerText = '退款申请已通过 (¥36.50)';
+      document.getElementById('pickupSubText').innerText = '订单 ORD_REF_801 · 款项将原路退回您的微信支付';
+      logLine(`[EVENT seq=${s}] ORDER_REFUND_PROCESSED (P1) status=APPROVED amount=36.50 -> 顶部通知横幅`);
+    }
+
+    function simulateBatchCoupons() {
+      const s1 = nextSeq();
+      const s2 = nextSeq();
+      const s3 = nextSeq();
+      couponCount += 3;
+      document.getElementById('couponBadge').innerText = couponCount;
+      logLine(`[EVENT seq=${s1}..${s3}] 800ms 窗口内连续到达 3 条 COUPON_GRANTED，合并为 1 个聚合弹窗`);
+
+      if (currentScene === 'checkout') {
+        document.getElementById('capsuleText').innerText = '🎉 连续到账 3 张新优惠券（最高立减 ¥20）';
+        document.getElementById('suppressCapsule').classList.add('visible');
+        return;
+      }
+
+      enqueueModal(1, 'COUPON', 'P1-800ms聚合3张优惠券弹窗', () => {
+        document.getElementById('modalTag').innerText = '800ms 智能聚合 · 连发 3 张';
+        document.getElementById('modalTitle').innerText = '恭喜获得 3 张新优惠券';
+        document.getElementById('modalSub').innerText = '最高立减 ¥20，已全部放入卡包';
+        document.getElementById('modalTicketsContainer').innerHTML = `
+          <div class="coupon-ticket">
+            <div class="ticket-amount"><small>¥</small>20</div>
+            <div class="ticket-meta">
+              <h5>周末狂欢满100减20元券</h5>
+              <p>全场通用 · 刚刚到账</p>
+            </div>
+          </div>
+          <div class="coupon-ticket">
+            <div class="ticket-amount"><small>¥</small>10</div>
+            <div class="ticket-meta">
+              <h5>烧烤专享满40减10元券 (等共3张)</h5>
+              <p>全场通用 · 刚刚到账</p>
+            </div>
+          </div>
+        `;
+        document.getElementById('couponModal').classList.add('visible');
+      });
+    }
+
+    function applyCapsuleCoupon() {
+      document.getElementById('suppressCapsule').classList.remove('visible');
+      document.getElementById('checkoutDiscount').innerText = '- ¥ 10.00';
+      document.getElementById('checkoutTotal').innerText = '84.00';
+      logLine(`[Checkout] 用户点击顶部胶囊横幅，已直接抵扣新到账优惠券 (-¥10.00)`);
+    }
+
+    function simulatePickupReady() {
+      const s = nextSeq();
+      const banner = document.getElementById('pickupBanner');
+      banner.className = 'pickup-top-banner visible';
+      document.getElementById('pickupCodeText').innerText = '#777';
+      document.getElementById('pickupTitleText').innerText = '您的餐品已全部出餐！';
+      document.getElementById('pickupSubText').innerText = '桌号 C05 · 请凭取餐号前往取餐口';
+      logLine(`[EVENT seq=${s}] ORDER_READY_FOR_PICKUP (P0) pickup_code=#777 -> 置顶强提醒条 + wx.vibrateLong()`);
+    }
+
+    function ackPickup() {
+      document.getElementById('pickupBanner').classList.remove('visible');
+      logLine(`[ACK] POST /user/notifications/ack -> 已确认顶部强提醒消息`);
+    }
+
+    function simulateCouponExpiring() {
+      const s = nextSeq();
+      document.getElementById('expiringSnackbar').classList.add('visible');
+      logLine(`[EVENT seq=${s}] COUPON_EXPIRING_SOON (P2) remaining_minutes=45 -> 底部非阻断 SnackBar`);
+    }
+
+    function dismissExpiring() {
+      document.getElementById('expiringSnackbar').classList.remove('visible');
+      logLine(`[ACK] 用户点击【去使用】临期优惠券，已发送 ACK`);
+    }
+
+    function simulateDishSoldOut() {
+      const s = nextSeq();
+      const card = document.getElementById('dishCard99');
+      const btn = document.getElementById('dishBtn99');
+      card.classList.add('soldout');
+      btn.className = 'soldout-tag';
+      btn.innerText = '已估清';
+      logLine(`[EVENT seq=${s}] DISH_CATALOG_CHANGED (P3) dishId=99 招牌脆皮烤鸡 onsale=false -> 静默刷新菜品状态`);
+    }
+
+    function simulateReconnectSync() {
+      logLine(`[SYNC] GET /user/notifications/sync?last_seq_id=${seqId} (Header: X-User-Token) -> 200 OK (items=0, server_head_seq_id=${seqId})`);
+    }
+  </script>
+</body>
+</html>

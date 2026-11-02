@@ -1,0 +1,9 @@
+# Scenario Matrix — WI-079
+
+| Scenario ID | Category | Description | Expected Outcome | Test Method |
+|---|---|---|---|---|
+| `S2-01` | Security & Routing | `WebAppConfigurer` excludes `/api/v1/notifications/**` from `SysInterceptor`, and `NotificationChannelController` enforces `X-User-Token` identity on `/user/notifications/*` and `/api/v1/notifications/*` | Valid `X-User-Token` auto-binds `openid`; mismatched `openid` returns `403`; invalid `X-User-Token` returns `401` | `cSideUserTokenAuthAndAntiSpoofingShouldBeEnforcedOnRestAndWebSocket` |
+| `S2-02` | WebSocket Handshake | Mini Program connects to `/ws/v1/notify?client_type=MINI_PROGRAM&token=<user-jwt>` | Valid user JWT binds `openid = claims.getId()`; spoofed `openid` query param is rejected with `1008 POLICY_VIOLATION` | `cSideUserTokenAuthAndAntiSpoofingShouldBeEnforcedOnRestAndWebSocket` |
+| `S2-03` | Expiring Coupon Watchdog | `CouponExpiringWatchdogScheduler` scans unused coupons expiring within 2 hours | Emits `COUPON_EXPIRING_SOON` (`P2`, `BOTTOM_SNACKBAR`) over WebSocket when online, falls back to WeChat Subscribe Message when offline, and deduplicates on second scan | `expiringCouponWatchdogShouldPushRealtimeAndFallbackToSubscribeWhenOffline` |
+| `S2-04` | Customer Pickup Notice | `KdsCustomerPickupNoticeService.notifyCustomerPickup` and `OrderController.notice` trigger pickup ready for an order with `openid` | Emits both shop broadcast `MEAL_PICKUP_READY` and customer-targeted `ORDER_READY_FOR_PICKUP` (`P0`, `target.scope = USER`, `openid`) | `customerPickupReadyAndRefundRequestedShouldRouteToTargetRecipients` |
+| `S2-05` | Refund Request Alert | Customer initiates refund request (`publishRefundRequested`) | Emits `REFUND_REQUESTED` (`P0`, `require_ack = true`) to the shop's `CASHIER` terminals | `customerPickupReadyAndRefundRequestedShouldRouteToTargetRecipients` |

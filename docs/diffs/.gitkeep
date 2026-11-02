@@ -1,0 +1,2 @@
+# This directory stores explicit Current → Target structural diff files (DXXX-*.md).
+# Created during v1 → v2 migration. Empty by design until a /change workflow creates a diff.
