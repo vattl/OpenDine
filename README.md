@@ -1,6 +1,23 @@
+<div align="center">
+
 # OpenDine 智膳系统
 
-面向中小餐饮门店的开源点餐、收银、后厨协作与经营管理系统。
+**面向中小餐饮门店的开源点餐、收银、后厨协作与经营管理系统**
+
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-8-orange.svg)](server/pom.xml)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-2.3.2-brightgreen.svg)](server/pom.xml)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-blue.svg)](server/docs/DEPLOYMENT.md)
+[![Docker Compose](https://img.shields.io/badge/Docker%20Compose-supported-2496ED.svg)](server/docs/DEPLOYMENT.md)
+
+把顾客点餐、前台收银、后厨出餐、交班日结和经营数据放进一套可自部署的门店系统。
+
+[快速开始](server/docs/DEPLOYMENT.md) · [功能与边界](#它能帮门店处理什么) · [项目结构](#项目组成) · [API 文档](server/docs/API.md) · [问题反馈](https://github.com/vattl/OpenDine/issues)
+
+</div>
+
+> [!IMPORTANT]
+> OpenDine 是开源软件，不附带微信支付商户资质、发票服务、打印设备、配送账号、AI 额度或生产运维服务。请先阅读[完整部署指南](server/docs/DEPLOYMENT.md)，再进行目标环境验收。
 
 一家店通常不缺软件，缺的是能接起来的业务流程：顾客下单后还要手写传菜单，前台不知道后厨做到哪一步，交班要从几个地方拼流水，菜品卖完了却来不及同步给顾客。OpenDine 把这些环节放进同一个服务端和数据库，供商家自行部署、配置和维护。
 
