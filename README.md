@@ -1,6 +1,6 @@
 <div align="center">
 
-# OpenDine 智膳系统
+# OpenDine 餐饮系统
 
 **面向中小餐饮门店的开源点餐、收银、后厨协作与经营管理系统**
 
